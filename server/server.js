@@ -4,6 +4,10 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import universityRoutes from "./routes/universityRoutes.js";
+import studentRoutes from "./routes/studentRoutes.js";
+import circularRoutes from "./routes/circularRoutes.js";
+import applicationRoutes from "./routes/applicationRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -17,6 +21,10 @@ app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/university", universityRoutes);
+app.use("/api/student", studentRoutes);
+app.use("/api/circulars", circularRoutes);
+app.use("/api/applications", applicationRoutes);
 
 // Central error handler
 app.use((err, req, res, next) => {
