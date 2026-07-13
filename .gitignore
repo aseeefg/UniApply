@@ -1,15 +1,15 @@
 # Dependencies
 node_modules/
-client/node_modules/
+view/node_modules/
 server/node_modules/
 
 # Env files
 .env
-client/.env
+view/.env
 server/.env
 
 # Build output
-client/dist/
+view/dist/
 server/dist/
 
 # Logs
