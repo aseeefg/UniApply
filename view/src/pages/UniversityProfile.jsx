@@ -35,7 +35,8 @@ export default function UniversityProfile() {
 
   return (
     <div className="page">
-      <Link to="/dashboard">&larr; Back to dashboard</Link>
+      <Link to="/dashboard" className="back-link">← Back to dashboard</Link>
+      <p className="eyebrow">University Office</p>
       <h1>University Profile</h1>
       <p className={`status-badge status-${status}`}>Verification status: {status}</p>
       {message && <p className="success">{message}</p>}

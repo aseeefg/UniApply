@@ -33,7 +33,8 @@ export default function StudentProfile() {
 
   return (
     <div className="page">
-      <Link to="/dashboard">&larr; Back to dashboard</Link>
+      <Link to="/dashboard" className="back-link">← Back to dashboard</Link>
+      <p className="eyebrow">Student Records</p>
       <h1>Student Profile</h1>
       {message && <p className="success">{message}</p>}
 

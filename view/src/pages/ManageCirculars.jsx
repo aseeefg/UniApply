@@ -68,7 +68,8 @@ export default function ManageCirculars() {
 
   return (
     <div className="page">
-      <Link to="/dashboard">&larr; Back to dashboard</Link>
+      <Link to="/dashboard" className="back-link">← Back to dashboard</Link>
+      <p className="eyebrow">University Office</p>
       <h1>Manage Admission Circulars</h1>
       {message && <p className="success">{message}</p>}
 

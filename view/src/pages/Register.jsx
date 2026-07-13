@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Letterhead from "../components/Letterhead";
 
 export default function Register() {
   const [role, setRole] = useState("student");
@@ -32,45 +33,48 @@ export default function Register() {
 
   return (
     <div className="auth-page">
-      <form onSubmit={handleSubmit} className="auth-form">
-        <h1>Create your account</h1>
-        {error && <p className="error">{error}</p>}
-        {message && <p className="success">{message}</p>}
+      <div className="auth-card">
+        <Letterhead subtitle="Admissions Portal" />
+        <form onSubmit={handleSubmit} className="auth-form">
+          <h2>Create your account</h2>
+          {error && <p className="error">{error}</p>}
+          {message && <p className="success">{message}</p>}
 
-        <div className="role-toggle">
-          <button type="button" className={role === "student" ? "active" : ""} onClick={() => setRole("student")}>
-            Student
-          </button>
-          <button type="button" className={role === "university" ? "active" : ""} onClick={() => setRole("university")}>
-            University
-          </button>
-        </div>
+          <div className="role-toggle">
+            <button type="button" className={role === "student" ? "active" : ""} onClick={() => setRole("student")}>
+              Student
+            </button>
+            <button type="button" className={role === "university" ? "active" : ""} onClick={() => setRole("university")}>
+              University
+            </button>
+          </div>
 
-        <input name="name" placeholder="Full name" value={form.name} onChange={handleChange} required />
-        <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required />
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          required
-        />
-
-        {role === "university" && (
+          <input name="name" placeholder="Full name" value={form.name} onChange={handleChange} required />
+          <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required />
           <input
-            placeholder="University name"
-            value={universityName}
-            onChange={(e) => setUniversityName(e.target.value)}
+            name="password"
+            type="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
             required
           />
-        )}
 
-        <button type="submit">Register</button>
-        <p>
-          Already have an account? <Link to="/login">Log in</Link>
-        </p>
-      </form>
+          {role === "university" && (
+            <input
+              placeholder="University name"
+              value={universityName}
+              onChange={(e) => setUniversityName(e.target.value)}
+              required
+            />
+          )}
+
+          <button type="submit">Register</button>
+          <p>
+            Already have an account? <Link to="/login">Log in</Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }

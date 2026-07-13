@@ -25,7 +25,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="page">
-      <Link to="/dashboard">&larr; Back to dashboard</Link>
+      <Link to="/dashboard" className="back-link">← Back to dashboard</Link>
+      <p className="eyebrow">Admin Desk</p>
       <h1>Pending University Verifications</h1>
 
       {pending.length === 0 && <p>No universities awaiting approval.</p>}
