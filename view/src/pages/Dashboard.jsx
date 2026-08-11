@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import { Box, Typography, Button, Card, CardContent, CircularProgress, Alert, Stack } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import Letterhead from "../components/Letterhead";
 import api from "../api/axios";
@@ -8,61 +9,111 @@ const roleLabels = { student: "Student", university: "University", admin: "Admin
 
 function StatCard({ label, value }) {
   return (
-    <div className="stat-card">
-      <p className="stat-value">{value}</p>
-      <p className="stat-label">{label}</p>
-    </div>
+    <Card sx={{ minWidth: 200, textAlign: 'center', p: 2 }}>
+      <CardContent>
+        <Typography variant="h3" component="div" color="primary" gutterBottom>
+          {value}
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary">
+          {label}
+        </Typography>
+      </CardContent>
+    </Card>
   );
 }
 
 function useStats(role) {
   const [stats, setStats] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
     const load = async () => {
+      if (!role) return;
+      setIsLoading(true);
+      setError(null);
       try {
+        let data;
         if (role === "student") {
-          const { data } = await api.get("/applications/mine");
-          setStats({
-            total: data.length,
-            underReview: data.filter((a) => a.status === "Under Review").length,
-            accepted: data.filter((a) => a.status === "Accepted").length,
-          });
+          const res = await api.get("/applications/mine");
+          data = res.data;
+          if (isMounted) {
+            setStats({
+              total: data.length,
+              underReview: data.filter((a) => a.status === "Under Review").length,
+              accepted: data.filter((a) => a.status === "Accepted").length,
+            });
+          }
         } else if (role === "university") {
-          const { data } = await api.get("/circulars/mine");
-          setStats({
-            total: data.length,
-            active: data.filter((c) => c.isActive).length,
-          });
+          const res = await api.get("/circulars/mine");
+          data = res.data;
+          if (isMounted) {
+            setStats({
+              total: data.length,
+              active: data.filter((c) => c.isActive).length,
+            });
+          }
         } else if (role === "admin") {
-          const { data } = await api.get("/admin/universities/pending");
-          setStats({ pending: data.length });
+          const res = await api.get("/admin/universities/pending");
+          data = res.data;
+          if (isMounted) {
+            setStats({ pending: data.length });
+          }
         }
-      } catch {
-        setStats(null);
+      } catch (err) {
+        if (isMounted) {
+          setError("Failed to load statistics.");
+          setStats(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
     load();
+    return () => { isMounted = false; };
   }, [role]);
 
-  return stats;
+  return { stats, isLoading, error };
 }
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  const stats = useStats(user?.role);
+  const { stats, isLoading, error } = useStats(user?.role);
 
   return (
-    <div className="dashboard">
+    <Box className="dashboard" sx={{ maxWidth: 800, mx: "auto", mt: 4, p: 2 }}>
       <Letterhead subtitle="Admissions Portal" />
-      <header>
-        <h2>Welcome, {user?.name}</h2>
-        <button onClick={logout}>Log out</button>
-      </header>
-      <p>Signed in as {roleLabels[user?.role] || user?.role}</p>
+      
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" component="h2">
+          Welcome, {user?.name}
+        </Typography>
+        <Button variant="outlined" color="secondary" onClick={logout}>
+          Log out
+        </Button>
+      </Box>
 
-      {stats && (
-        <div className="stat-grid">
+      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+        Signed in as {roleLabels[user?.role] || user?.role}
+      </Typography>
+
+      {isLoading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {error && (
+        <Alert severity="error" sx={{ my: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {stats && !isLoading && (
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, my: 4, justifyContent: 'center' }}>
           {user?.role === "student" && (
             <>
               <StatCard label="Applications submitted" value={stats.total} />
@@ -79,29 +130,29 @@ export default function Dashboard() {
           {user?.role === "admin" && (
             <StatCard label="Universities awaiting approval" value={stats.pending} />
           )}
-        </div>
+        </Box>
       )}
 
-      <div className="dashboard-links">
+      <Stack spacing={2} sx={{ mt: 4 }}>
         {user?.role === "student" && (
           <>
-            <Link to="/student/profile">Complete / edit my profile</Link>
-            <Link to="/circulars">Browse admission circulars</Link>
-            <Link to="/applications">My applications</Link>
+            <Button component={RouterLink} to="/student/profile" variant="contained">Complete / edit my profile</Button>
+            <Button component={RouterLink} to="/circulars" variant="contained">Browse admission circulars</Button>
+            <Button component={RouterLink} to="/applications" variant="contained">My applications</Button>
           </>
         )}
 
         {user?.role === "university" && (
           <>
-            <Link to="/university/profile">My university profile</Link>
-            <Link to="/university/circulars">Manage my circulars</Link>
+            <Button component={RouterLink} to="/university/profile" variant="contained">My university profile</Button>
+            <Button component={RouterLink} to="/university/circulars" variant="contained">Manage my circulars</Button>
           </>
         )}
 
         {user?.role === "admin" && (
-          <Link to="/admin/verifications">Pending university verifications</Link>
+          <Button component={RouterLink} to="/admin/verifications" variant="contained">Pending university verifications</Button>
         )}
-      </div>
-    </div>
+      </Stack>
+    </Box>
   );
 }

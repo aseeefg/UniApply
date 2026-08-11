@@ -10,16 +10,24 @@ export const AuthProvider = ({ children }) => {
   });
 
   const login = async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
-    setUser(data.user);
-    return data.user;
+    try {
+      const { data } = await api.post("/auth/login", { email, password });
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user);
+      return data.user;
+    } catch (err) {
+      throw new Error(err.response?.data?.message || "Login failed");
+    }
   };
 
   const register = async (payload) => {
-    const { data } = await api.post("/auth/register", payload);
-    return data;
+    try {
+      const { data } = await api.post("/auth/register", payload);
+      return data;
+    } catch (err) {
+      throw new Error(err.response?.data?.message || "Registration failed");
+    }
   };
 
   const logout = () => {
