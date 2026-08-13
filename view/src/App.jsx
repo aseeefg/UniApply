@@ -13,6 +13,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ManageCirculars from "./pages/ManageCirculars";
 import BrowseCirculars from "./pages/BrowseCirculars";
 import MyApplications from "./pages/MyApplications";
+import Recommendations from "./pages/Recommendations";
 import "./App.css";
 
 function App() {
@@ -73,6 +74,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
                   <MyApplications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/recommendations"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <Recommendations />
                 </ProtectedRoute>
               }
             />

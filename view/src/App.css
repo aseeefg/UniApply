@@ -358,6 +358,34 @@ a:focus-visible {
   margin-top: 0.6rem;
 }
 
+/* ---------- Recommendation match tags & AI explanation ---------- */
+
+.match-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
+.match-tag {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--brass);
+  border: 1px solid var(--brass);
+  border-radius: 2px;
+  padding: 0.15rem 0.5rem;
+}
+
+.ai-explanation {
+  margin-top: 0.7rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--paper, #f6f4ec);
+  border-left: 3px solid var(--brass);
+  border-radius: 2px;
+  font-size: 0.85rem;
+}
+.ai-explanation .ai-disclaimer {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+}
+
 /* ---------- Signature element: stamp-style status badges ---------- */
 
 .status-badge {

@@ -2,11 +2,17 @@ import mongoose from "mongoose";
 
 const studentProfileSchema = new mongoose.Schema(
   {
+    curriculumType: { type: String, enum: ["NCTB", "British"] },
     sscResult: { type: String },
     hscResult: { type: String },
-    gpa: { type: Number },
+    oLevelResult: { type: String },
+    aLevelResult: { type: String },
     phone: { type: String },
     address: { type: String },
+    degreeLevel: { type: String },
+    subjectInterests: { type: [String], default: [] },
+    preferredLocation: { type: String },
+    profileImage: { type: String },
   },
   { _id: false }
 );
