@@ -138,6 +138,7 @@ export default function Dashboard() {
           <>
             <Button component={RouterLink} to="/student/profile" variant="contained">Complete / edit my profile</Button>
             <Button component={RouterLink} to="/circulars" variant="contained">Browse admission circulars</Button>
+            <Button component={RouterLink} to="/recommendations" variant="contained">Recommended for you</Button>
             <Button component={RouterLink} to="/applications" variant="contained">My applications</Button>
           </>
         )}
