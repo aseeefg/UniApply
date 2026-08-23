@@ -36,12 +36,43 @@ export const createCircular = async (req, res) => {
 };
 
 // @route GET /api/circulars
-// Public - list all active circulars (basic version; search/filter comes in Sprint 2)
+// Public - list all active circulars with optional filtering (Feature 2)
+// Query params: degreeLevel, department, location, deadlineBefore (ISO date string)
 export const getAllCirculars = async (req, res) => {
-  const circulars = await Circular.find({ isActive: true })
-    .populate("university", "name universityProfile.universityName universityProfile.location")
-    .sort({ deadline: 1 });
-  res.json(circulars);
+  try {
+    const { degreeLevel, department, location, deadlineBefore } = req.query;
+
+    const filter = { isActive: true };
+
+    if (degreeLevel) {
+      filter.degreeLevel = { $regex: degreeLevel, $options: "i" };
+    }
+    if (department) {
+      filter.department = { $regex: department, $options: "i" };
+    }
+    if (deadlineBefore) {
+      filter.deadline = { $lte: new Date(deadlineBefore) };
+    }
+
+    let query = Circular.find(filter)
+      .populate("university", "name universityProfile.universityName universityProfile.location")
+      .sort({ deadline: 1 });
+
+    const circulars = await query;
+
+    // Filter by university location after populate (location lives inside universityProfile)
+    const filtered = location
+      ? circulars.filter((c) =>
+          c.university?.universityProfile?.location
+            ?.toLowerCase()
+            .includes(location.toLowerCase())
+        )
+      : circulars;
+
+    res.json(filtered);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 // @route GET /api/circulars/mine

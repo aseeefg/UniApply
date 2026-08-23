@@ -8,6 +8,8 @@ import universityRoutes from "./routes/universityRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import circularRoutes from "./routes/circularRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import { startReminderJob } from "./jobs/reminderJob.js";
 
 dotenv.config();
 connectDB();
@@ -25,6 +27,7 @@ app.use("/api/university", universityRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/circulars", circularRoutes);
 app.use("/api/applications", applicationRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Central error handler
 app.use((err, req, res, next) => {
@@ -33,4 +36,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  // Feature 3 — start the daily deadline reminder job after DB is connected
+  startReminderJob();
+});
