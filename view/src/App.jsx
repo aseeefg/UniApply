@@ -10,9 +10,11 @@ import Dashboard from "./pages/Dashboard";
 import UniversityProfile from "./pages/UniversityProfile";
 import StudentProfile from "./pages/StudentProfile";
 import AdminDashboard from "./pages/AdminDashboard";
+import ManageUsers from "./pages/ManageUsers";
 import ManageCirculars from "./pages/ManageCirculars";
 import BrowseCirculars from "./pages/BrowseCirculars";
 import MyApplications from "./pages/MyApplications";
+import ApplicantManagement from "./pages/ApplicantManagement";
 import Recommendations from "./pages/Recommendations";
 import "./App.css";
 
@@ -36,6 +38,7 @@ function App() {
               }
             />
 
+            {/* University routes */}
             <Route
               path="/university/profile"
               element={
@@ -52,7 +55,17 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Feature 4 — Applicant Management */}
+            <Route
+              path="/university/applicants"
+              element={
+                <ProtectedRoute allowedRoles={["university"]}>
+                  <ApplicantManagement />
+                </ProtectedRoute>
+              }
+            />
 
+            {/* Student routes */}
             <Route
               path="/student/profile"
               element={
@@ -69,6 +82,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Feature 5 — Application Status Tracking */}
             <Route
               path="/applications"
               element={
@@ -86,11 +100,21 @@ function App() {
               }
             />
 
+            {/* Admin routes */}
             <Route
               path="/admin/verifications"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            {/* Feature 1 — Manage Users */}
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ManageUsers />
                 </ProtectedRoute>
               }
             />
