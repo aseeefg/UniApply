@@ -1,4 +1,6 @@
 import User from "../models/User.js";
+import Circular from "../models/Circular.js";
+import Application from "../models/Application.js";
 
 // @route GET /api/university/profile
 // Returns the logged-in university's own profile
@@ -26,6 +28,37 @@ export const updateMyProfile = async (req, res) => {
     ...(contactInfo && { contactInfo }),
   };
   await university.save();
-
+  
   res.json({ message: "Profile updated", universityProfile: university.universityProfile });
+};
+
+// @route GET /api/university/dashboard
+// Returns all circulars posted by the logged-in university, with applicant counts
+export const getUniversityDashboard = async (req, res) => {
+  try {
+    const circulars = await Circular.find({ university: req.user._id });
+
+    const dashboardData = await Promise.all(
+      circulars.map(async (circular) => {
+        const applicantCount = await Application.countDocuments({ circular: circular._id });
+        return {
+          _id: circular._id,
+          programName: circular.programName,
+          department: circular.department,
+          deadline: circular.deadline,
+          seatsAvailable: circular.seatsAvailable,
+          isActive: circular.isActive,
+          applicantCount,
+        };
+      })
+    );
+
+    res.status(200).json({
+      totalCirculars: circulars.length,
+      activeCirculars: circulars.filter((c) => c.isActive).length,
+      circulars: dashboardData,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };

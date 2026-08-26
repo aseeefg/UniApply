@@ -112,3 +112,35 @@ export const updateApplicationStatus = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// @route POST /api/applications/:id/documents
+// Student uploads documents for an application
+export const uploadDocuments = async (req, res) => {
+  try {
+    const application = await Application.findById(req.params.id);
+    if (!application) return res.status(404).json({ message: "Application not found" });
+
+    if (String(application.student) !== String(req.user._id)) {
+      return res.status(403).json({ message: "Not your application" });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+
+    const types = Array.isArray(req.body.types) ? req.body.types : [req.body.types];
+
+    const newDocuments = req.files.map((file, index) => ({
+      name: file.originalname,
+      url: file.path,
+      type: types[index] || "other",
+    }));
+
+    application.documents.push(...newDocuments);
+    await application.save();
+
+    res.status(200).json(application);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
