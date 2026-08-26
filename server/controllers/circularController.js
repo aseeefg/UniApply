@@ -131,3 +131,80 @@ export const deleteCircular = async (req, res) => {
   await circular.deleteOne();
   res.json({ message: "Circular deleted" });
 };
+
+// @route GET /api/circulars/search?query=xyz
+export const searchCirculars = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || query.trim() === "") {
+      const allCirculars = await Circular.find({ isActive: true }).populate(
+        "university",
+        "universityProfile.universityName universityProfile.location"
+      );
+      return res.status(200).json(allCirculars);
+    }
+
+    const byProgram = await Circular.find({
+      isActive: true,
+      programName: { $regex: query, $options: "i" },
+    }).populate("university", "universityProfile.universityName universityProfile.location");
+
+    const byUniversity = await Circular.find({ isActive: true }).populate({
+      path: "university",
+      match: { "universityProfile.universityName": { $regex: query, $options: "i" } },
+      select: "universityProfile.universityName universityProfile.location",
+    });
+    const universityMatches = byUniversity.filter((c) => c.university !== null);
+
+    const merged = [...byProgram, ...universityMatches].filter(
+      (c, index, self) => index === self.findIndex((x) => x._id.equals(c._id))
+    );
+
+    res.status(200).json(merged);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @route PUT /api/circulars/:id
+export const updateCircular = async (req, res) => {
+  try {
+    const circular = await Circular.findById(req.params.id);
+    if (!circular) return res.status(404).json({ message: "Circular not found" });
+
+    if (circular.university.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized to edit this circular" });
+    }
+
+    const allowedFields = [
+      "programName", "department", "degreeLevel", "seatsAvailable",
+      "minRequirements", "applicationFee", "deadline", "isActive",
+    ];
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) circular[field] = req.body[field];
+    });
+
+    await circular.save();
+    res.status(200).json(circular);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @route DELETE /api/circulars/:id
+export const deleteCircular = async (req, res) => {
+  try {
+    const circular = await Circular.findById(req.params.id);
+    if (!circular) return res.status(404).json({ message: "Circular not found" });
+
+    if (circular.university.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized to delete this circular" });
+    }
+
+    await circular.deleteOne();
+    res.status(200).json({ message: "Circular deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
