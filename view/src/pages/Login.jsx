@@ -1,16 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Card from "@mui/material/Card";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
 import { useAuth } from "../context/AuthContext";
-import AuthContent from "../components/mui/AuthContent";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -31,75 +21,40 @@ export default function Login() {
   };
 
   return (
-    <Stack
-      direction="column"
-      component="main"
-      sx={{
-        minHeight: "100vh",
-        justifyContent: "center",
-        backgroundImage: "radial-gradient(ellipse at 50% 30%, hsl(15, 45%, 92%), transparent)",
-      }}
-    >
-      <Stack
-        direction={{ xs: "column-reverse", md: "row" }}
-        sx={{ justifyContent: "center", gap: { xs: 6, sm: 10 }, p: { xs: 2, sm: 4 }, m: "auto" }}
-      >
-        <AuthContent />
-        <Card
-          elevation={0}
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignSelf: "center",
-            width: "100%",
-            maxWidth: 420,
-            p: 4,
-            gap: 2,
-            borderRadius: "16px",
-            boxShadow: "0 8px 32px rgba(24, 42, 34, 0.1)",
-          }}
-        >
-          <Typography component="h1" variant="h4" sx={{ fontSize: "clamp(1.8rem, 6vw, 2.1rem)" }}>
-            Log in
-          </Typography>
-          {error && <Alert severity="error">{error}</Alert>}
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <FormControl>
-              <FormLabel htmlFor="email">Email</FormLabel>
-              <TextField
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                fullWidth
-              />
-            </FormControl>
-            <FormControl>
-              <FormLabel htmlFor="password">Password</FormLabel>
-              <TextField
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••"
-                required
-                fullWidth
-              />
-            </FormControl>
-            <Button type="submit" fullWidth variant="contained">
-              Log in
-            </Button>
-            <Typography sx={{ textAlign: "center" }}>
-              No account?{" "}
-              <RouterLink to="/register" style={{ color: "inherit" }}>
-                Register
-              </RouterLink>
-            </Typography>
-          </Box>
-        </Card>
-      </Stack>
-    </Stack>
+    <div className="flex-1 flex items-center justify-center px-4 py-16">
+      <div className="w-full max-w-[400px] bg-card border border-border border-l-4 border-l-seal rounded-lg shadow-[0_1px_3px_rgba(24,42,34,0.06)] px-7 py-9">
+        <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
+          <h2 className="text-xl mb-1">Log in</h2>
+          {error && <p className="error">{error}</p>}
+
+          <label htmlFor="email" className="font-mono text-xs uppercase tracking-wide text-slate">Email</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            required
+            className="px-3 py-2.5 border border-border rounded-md text-[0.95rem] bg-paper text-ink focus:outline-none focus:border-seal transition-colors duration-300"
+          />
+
+          <label htmlFor="password" className="font-mono text-xs uppercase tracking-wide text-slate">Password</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••"
+            required
+            className="px-3 py-2.5 border border-border rounded-md text-[0.95rem] bg-paper text-ink focus:outline-none focus:border-seal transition-colors duration-300"
+          />
+
+          <button type="submit" className="btn-solid mt-2 w-full text-center">Log in</button>
+          <p className="text-center text-sm text-ink-soft mt-1">
+            No account? <RouterLink to="/register" className="text-seal">Register</RouterLink>
+          </p>
+        </form>
+      </div>
+    </div>
   );
 }

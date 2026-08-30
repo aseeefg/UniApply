@@ -1,5 +1,5 @@
 /**
- * reminderJob.js — Deadline Reminder Notifications (Feature 3)
+ * reminderJob.js - Deadline Reminder Notifications (Feature 3)
  *
  * Runs every day at midnight (via setInterval, no extra deps needed).
  * Finds circulars whose deadline falls within the next 3 days.

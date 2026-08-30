@@ -1,5 +1,59 @@
 import Circular from "../models/Circular.js";
 
+// The 8 administrative divisions of Bangladesh - university locations are
+// freeform text (e.g. "Palashi, Dhaka-1000"), so the location filter matches
+// against whichever division name appears in that text rather than requiring
+// an exact value.
+const BD_DIVISIONS = ["Dhaka", "Chittagong", "Rajshahi", "Khulna", "Barisal", "Sylhet", "Rangpur", "Mymensingh"];
+const DIVISION_ALIASES = {
+  Chittagong: ["chittagong", "chattogram"],
+  Barisal: ["barisal", "barishal"],
+};
+
+const locationMatchesDivision = (locationText, division) => {
+  if (!locationText) return false;
+  const text = locationText.toLowerCase();
+  const aliases = DIVISION_ALIASES[division] || [division.toLowerCase()];
+  return aliases.some((alias) => text.includes(alias));
+};
+
+const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Real department/program names are freeform institution text ("BRAC
+// Business School", "Faculty of Business Studies") that will almost never
+// contain a generic AI-suggested category like "Business Administration" as
+// a whole-phrase substring. Matching word-by-word (skipping short/stop words)
+// is what lets "Business Administration" surface a circular whose department
+// is "Faculty of Business Studies" - it only needs to share "business".
+//
+// Requiring every word to match (AND) keeps that from getting too loose -
+// without it, "Computer Science" would match "Faculty of Veterinary Science"
+// on the word "science" alone. AND is tried first; only when it finds
+// nothing do we fall back to matching any single word (OR), so a query with
+// one word neither department shares in full still returns its closest hits
+// instead of nothing.
+const SEARCH_STOPWORDS = new Set(["and", "the", "for", "with", "of", "in", "a", "an"]);
+const SEARCH_FIELDS = ["programName", "department"];
+
+const searchWords = (q) =>
+  q
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !SEARCH_STOPWORDS.has(w));
+
+// Each word must appear in programName or department (any field, but every word)
+const wordsMatchAllCondition = (words) => ({
+  $and: words.map((w) => ({
+    $or: SEARCH_FIELDS.map((field) => ({ [field]: new RegExp(escapeRegExp(w), "i") })),
+  })),
+});
+
+// Any single word appearing in either field is enough
+const wordsMatchAnyCondition = (words) => ({
+  $or: SEARCH_FIELDS.flatMap((field) => words.map((w) => ({ [field]: new RegExp(escapeRegExp(w), "i") }))),
+});
+
 // @route POST /api/circulars
 // University creates a new circular
 export const createCircular = async (req, res) => {
@@ -10,12 +64,16 @@ export const createCircular = async (req, res) => {
       degreeLevel,
       seatsAvailable,
       minRequirements,
+      minGPA,
       applicationFee,
       deadline,
     } = req.body;
 
     if (!programName || !department || !seatsAvailable || !minRequirements || !applicationFee || !deadline) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+    if (new Date(deadline) < new Date()) {
+      return res.status(400).json({ message: "Deadline must be in the future" });
     }
 
     const circular = await Circular.create({
@@ -25,6 +83,7 @@ export const createCircular = async (req, res) => {
       degreeLevel,
       seatsAvailable,
       minRequirements,
+      minGPA,
       applicationFee,
       deadline,
     });
@@ -37,39 +96,71 @@ export const createCircular = async (req, res) => {
 
 // @route GET /api/circulars
 // Public - list all active circulars with optional filtering (Feature 2)
-// Query params: degreeLevel, department, location, deadlineBefore (ISO date string)
+// Query params: degreeLevel, department, location (each a comma-separated list
+// of exact values from /api/circulars/filter-options), deadlineBefore (ISO date),
+// q (freeform search - e.g. from the Program Quiz's suggested category -
+// matched word-by-word against programName/department, not exact)
 export const getAllCirculars = async (req, res) => {
   try {
-    const { degreeLevel, department, location, deadlineBefore } = req.query;
+    const { degreeLevel, department, location, deadlineBefore, q } = req.query;
 
     const filter = { isActive: true };
 
     if (degreeLevel) {
-      filter.degreeLevel = { $regex: degreeLevel, $options: "i" };
+      filter.degreeLevel = { $in: degreeLevel.split(",") };
     }
     if (department) {
-      filter.department = { $regex: department, $options: "i" };
+      filter.department = { $in: department.split(",") };
     }
     if (deadlineBefore) {
       filter.deadline = { $lte: new Date(deadlineBefore) };
     }
+    if (q) {
+      const words = searchWords(q);
+      if (words.length > 0) {
+        const andCount = await Circular.countDocuments({ ...filter, ...wordsMatchAllCondition(words) });
+        Object.assign(filter, andCount > 0 ? wordsMatchAllCondition(words) : wordsMatchAnyCondition(words));
+      }
+    }
 
     let query = Circular.find(filter)
-      .populate("university", "name universityProfile.universityName universityProfile.location")
+      .populate("university", "name universityProfile.universityName universityProfile.location universityProfile.logo")
       .sort({ deadline: 1 });
 
     const circulars = await query;
 
-    // Filter by university location after populate (location lives inside universityProfile)
-    const filtered = location
+    // Filter by university location after populate (location lives inside universityProfile).
+    // "location" here is one or more division names; match if the university's
+    // freeform location text mentions any of the selected divisions.
+    const divisions = location ? location.split(",") : null;
+    const filtered = divisions
       ? circulars.filter((c) =>
-          c.university?.universityProfile?.location
-            ?.toLowerCase()
-            .includes(location.toLowerCase())
+          divisions.some((div) => locationMatchesDivision(c.university?.universityProfile?.location, div))
         )
       : circulars;
 
     res.json(filtered);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @route GET /api/circulars/filter-options
+// Public - values to populate the filter dropdowns. Degree level and
+// department are the real, currently-in-use values; location is always the
+// fixed 8 divisions of Bangladesh rather than raw freeform address text.
+export const getCircularFilterOptions = async (req, res) => {
+  try {
+    const [degreeLevels, departments] = await Promise.all([
+      Circular.distinct("degreeLevel", { isActive: true, degreeLevel: { $nin: [null, ""] } }),
+      Circular.distinct("department", { isActive: true }),
+    ]);
+
+    res.json({
+      degreeLevels: degreeLevels.sort(),
+      departments: departments.sort(),
+      locations: BD_DIVISIONS,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -93,81 +184,6 @@ export const getCircularById = async (req, res) => {
 };
 
 // @route PATCH /api/circulars/:id
-// University - edit their own circular
-export const updateCircular = async (req, res) => {
-  const circular = await Circular.findById(req.params.id);
-  if (!circular) return res.status(404).json({ message: "Circular not found" });
-  if (String(circular.university) !== String(req.user._id)) {
-    return res.status(403).json({ message: "Not your circular" });
-  }
-
-  const allowedFields = [
-    "programName",
-    "department",
-    "degreeLevel",
-    "seatsAvailable",
-    "minRequirements",
-    "applicationFee",
-    "deadline",
-    "isActive",
-  ];
-  allowedFields.forEach((field) => {
-    if (req.body[field] !== undefined) circular[field] = req.body[field];
-  });
-
-  await circular.save();
-  res.json(circular);
-};
-
-// @route DELETE /api/circulars/:id
-// University - permanently remove their own circular
-export const deleteCircular = async (req, res) => {
-  const circular = await Circular.findById(req.params.id);
-  if (!circular) return res.status(404).json({ message: "Circular not found" });
-  if (String(circular.university) !== String(req.user._id)) {
-    return res.status(403).json({ message: "Not your circular" });
-  }
-
-  await circular.deleteOne();
-  res.json({ message: "Circular deleted" });
-};
-
-// @route GET /api/circulars/search?query=xyz
-export const searchCirculars = async (req, res) => {
-  try {
-    const { query } = req.query;
-
-    if (!query || query.trim() === "") {
-      const allCirculars = await Circular.find({ isActive: true }).populate(
-        "university",
-        "universityProfile.universityName universityProfile.location"
-      );
-      return res.status(200).json(allCirculars);
-    }
-
-    const byProgram = await Circular.find({
-      isActive: true,
-      programName: { $regex: query, $options: "i" },
-    }).populate("university", "universityProfile.universityName universityProfile.location");
-
-    const byUniversity = await Circular.find({ isActive: true }).populate({
-      path: "university",
-      match: { "universityProfile.universityName": { $regex: query, $options: "i" } },
-      select: "universityProfile.universityName universityProfile.location",
-    });
-    const universityMatches = byUniversity.filter((c) => c.university !== null);
-
-    const merged = [...byProgram, ...universityMatches].filter(
-      (c, index, self) => index === self.findIndex((x) => x._id.equals(c._id))
-    );
-
-    res.status(200).json(merged);
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-// @route PUT /api/circulars/:id
 export const updateCircular = async (req, res) => {
   try {
     const circular = await Circular.findById(req.params.id);
@@ -177,9 +193,13 @@ export const updateCircular = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to edit this circular" });
     }
 
+    if (req.body.deadline !== undefined && new Date(req.body.deadline) < new Date()) {
+      return res.status(400).json({ message: "Deadline must be in the future" });
+    }
+
     const allowedFields = [
       "programName", "department", "degreeLevel", "seatsAvailable",
-      "minRequirements", "applicationFee", "deadline", "isActive",
+      "minRequirements", "minGPA", "applicationFee", "deadline", "isActive",
     ];
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) circular[field] = req.body[field];

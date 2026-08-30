@@ -6,6 +6,7 @@ import {
   getAllUsers,
   toggleUserActive,
   getAdminStats,
+  getAnalytics,
 } from "../controllers/adminController.js";
 
 const router = express.Router();
@@ -16,11 +17,14 @@ router.use(protect, authorize("admin"));
 router.get("/universities/pending", getPendingUniversities);
 router.patch("/universities/:id/verify", verifyUniversity);
 
-// Feature 1 — Manage Users
+// Feature 1 - Manage Users
 router.get("/users", getAllUsers);
 router.patch("/users/:id/toggle-active", toggleUserActive);
 
 // Stats
 router.get("/stats", getAdminStats);
+
+// Feature 4 - Analytics Dashboard
+router.get("/analytics", getAnalytics);
 
 export default router;

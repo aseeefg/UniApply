@@ -20,7 +20,12 @@ const applicationSchema = new mongoose.Schema(
       {
         name: String,
         url: String,
-        type: String, // transcript, certificate, nationalId, photo
+        // Wrapped as { type: String } rather than bare `type: String` -
+        // Mongoose treats a bare `type` key as the schema-type declaration
+        // for the whole subdocument, not a field named "type", which was
+        // silently collapsing this into an array of strings instead of an
+        // array of { name, url, type } objects.
+        type: { type: String }, // transcript, certificate, nationalId, photo
       },
     ],
     status: {

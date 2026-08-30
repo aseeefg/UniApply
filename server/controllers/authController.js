@@ -12,11 +12,17 @@ export const register = async (req, res) => {
   try {
     const { name, email, password, role, universityProfile } = req.body;
 
-    if (!name || !email || !password || !role) {
+    if (!email || !password || !role) {
       return res.status(400).json({ message: "Missing required fields" });
     }
     if (!["student", "university"].includes(role)) {
       return res.status(400).json({ message: "Invalid role for self-registration" });
+    }
+    if (role === "student" && !name) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+    if (role === "university" && !universityProfile?.universityName) {
+      return res.status(400).json({ message: "University name is required" });
     }
 
     const existing = await User.findOne({ email });
@@ -25,7 +31,7 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
-      name,
+      name: role === "university" ? universityProfile.universityName : name,
       email,
       password: hashedPassword,
       role,
