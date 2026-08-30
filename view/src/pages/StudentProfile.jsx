@@ -1,29 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
-import {
-  Box,
-  Typography,
-  Button,
-  TextField,
-  Stack,
-  Grid,
-  Card,
-  CardContent,
-  Alert,
-  CircularProgress,
-  Avatar,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  FormHelperText,
-  Divider,
-} from "@mui/material";
-import PersonIcon from "@mui/icons-material/Person";
 import api from "../api/axios";
+import Alert from "../components/Alert";
 
 const DEGREE_LEVELS = ["Undergraduate", "Postgraduate", "Doctorate"];
 
@@ -90,12 +67,18 @@ export default function StudentProfile() {
     address: "",
     degreeLevel: "",
     preferredLocation: "",
+    willingToRelocate: true,
+    nctbGroup: "",
+    institutionTypePreference: "No preference",
     profileImage: "",
+    transcriptUrl: "",
+    transcriptName: "",
   });
   const [subjectCategory, setSubjectCategory] = useState("");
   const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingTranscript, setUploadingTranscript] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -150,6 +133,24 @@ export default function StudentProfile() {
     reader.readAsDataURL(file);
   };
 
+  const handleTranscriptChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError("");
+    setUploadingTranscript(true);
+    try {
+      const formData = new FormData();
+      formData.append("transcript", file);
+      const { data } = await api.post("/student/profile/transcript", formData);
+      setForm((f) => ({ ...f, ...data.studentProfile }));
+      setMessage("Transcript uploaded.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not upload transcript.");
+    } finally {
+      setUploadingTranscript(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -170,179 +171,260 @@ export default function StudentProfile() {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
-        <CircularProgress />
-      </Box>
+      <div style={{ display: "flex", justifyContent: "center", marginTop: "4rem" }}>
+        <span className="spinner" />
+      </div>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 1000, mx: "auto", mt: 4, p: 2 }}>
-      <Button component={RouterLink} to="/dashboard" sx={{ mb: 2 }}>
-        ← Back to dashboard
-      </Button>
+    <div className="page">
+      <p className="eyebrow">Student Records</p>
+      <h1>Student Profile</h1>
 
-      <Typography variant="overline" display="block" gutterBottom>
-        Student Records
-      </Typography>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Student Profile
-      </Typography>
+      {message && <p className="success" style={{ marginBottom: "1rem" }}>{message}</p>}
+      {error && <p className="error" style={{ marginBottom: "1rem" }}>{error}</p>}
 
-      {message && <Alert severity="success" sx={{ mb: 3 }}>{message}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {form.curriculumType === "NCTB" && !form.hscResult && (
+        <div style={{ marginBottom: "1rem" }}>
+          <Alert variant="warning" title="HSC result missing">
+            Add your HSC result below to use the eligibility checker on circulars.
+          </Alert>
+        </div>
+      )}
 
-      <Card variant="outlined">
-        <CardContent sx={{ p: 3 }}>
-          <Box component="form" onSubmit={handleSubmit}>
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-              <Avatar src={form.profileImage || undefined} sx={{ width: 72, height: 72 }}>
-                <PersonIcon fontSize="large" />
-              </Avatar>
-              <Button variant="outlined" component="label" size="small">
-                {form.profileImage ? "Change photo" : "Add picture"}
-                <input type="file" hidden accept="image/*" onChange={handleImageChange} />
-              </Button>
-            </Stack>
+      <div className="card">
+        <form onSubmit={handleSubmit}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.75rem" }}>
+            <div className="avatar avatar-lg">
+              {form.profileImage ? <img src={form.profileImage} alt="" /> : "👤"}
+            </div>
+            <label className="btn-outline" style={{ cursor: "pointer" }}>
+              {form.profileImage ? "Change photo" : "Add picture"}
+              <input type="file" hidden accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
+            </label>
+          </div>
 
-            <Typography variant="h6" gutterBottom>Academic background</Typography>
-            <Grid container spacing={2.5} sx={{ mb: 3 }}>
-              <Grid size={12}>
-                <FormControl fullWidth>
-                  <InputLabel id="curriculum-label">Curriculum</InputLabel>
-                  <Select
-                    labelId="curriculum-label"
-                    name="curriculumType"
-                    label="Curriculum"
-                    value={form.curriculumType || ""}
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="NCTB">NCTB Curriculum</MenuItem>
-                    <MenuItem value="British">British Curriculum</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+          <div className="form-section">
+            <h3>Academic background</h3>
+            <div className="form-grid">
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <label htmlFor="curriculumType">Curriculum</label>
+                <select
+                  id="curriculumType"
+                  className="select"
+                  name="curriculumType"
+                  value={form.curriculumType || ""}
+                  onChange={handleChange}
+                >
+                  <option value="">Select curriculum</option>
+                  <option value="NCTB">NCTB Curriculum</option>
+                  <option value="British">British Curriculum</option>
+                </select>
+              </div>
 
               {form.curriculumType === "NCTB" && (
                 <>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="SSC result" name="sscResult" placeholder="e.g. GPA 5.00" value={form.sscResult || ""} onChange={handleChange} fullWidth />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="HSC result" name="hscResult" placeholder="e.g. GPA 4.83" value={form.hscResult || ""} onChange={handleChange} fullWidth />
-                  </Grid>
+                  <div className="field">
+                    <label htmlFor="nctbGroup">Background (group)</label>
+                    <select
+                      id="nctbGroup"
+                      className="select"
+                      name="nctbGroup"
+                      value={form.nctbGroup || ""}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select group</option>
+                      <option value="Science">Science</option>
+                      <option value="Business">Business</option>
+                      <option value="Arts">Arts</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="sscResult">SSC result</label>
+                    <input id="sscResult" name="sscResult" placeholder="e.g. GPA 5.00" value={form.sscResult || ""} onChange={handleChange} />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="hscResult">HSC result</label>
+                    <input id="hscResult" name="hscResult" placeholder="e.g. GPA 4.83" value={form.hscResult || ""} onChange={handleChange} />
+                  </div>
                 </>
               )}
 
               {form.curriculumType === "British" && (
                 <>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="O Level result" name="oLevelResult" placeholder="e.g. 6A 2B" value={form.oLevelResult || ""} onChange={handleChange} fullWidth />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField label="A Level result" name="aLevelResult" placeholder="e.g. 3A" value={form.aLevelResult || ""} onChange={handleChange} fullWidth />
-                  </Grid>
+                  <div className="field">
+                    <label htmlFor="oLevelResult">O Level result</label>
+                    <input id="oLevelResult" name="oLevelResult" placeholder="e.g. 6A 2B" value={form.oLevelResult || ""} onChange={handleChange} />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="aLevelResult">A Level result</label>
+                    <input id="aLevelResult" name="aLevelResult" placeholder="e.g. 3A" value={form.aLevelResult || ""} onChange={handleChange} />
+                  </div>
                 </>
               )}
-            </Grid>
+            </div>
+          </div>
 
-            <Divider sx={{ mb: 3 }} />
+          <hr className="divider" />
 
-            <Typography variant="h6" gutterBottom>Contact</Typography>
-            <Grid container spacing={2.5} sx={{ mb: 3 }}>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField label="Phone" name="phone" value={form.phone || ""} onChange={handleChange} fullWidth />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField label="Address" name="address" value={form.address || ""} onChange={handleChange} fullWidth />
-              </Grid>
-            </Grid>
+          <div className="form-section">
+            <h3>Contact</h3>
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="phone">Phone</label>
+                <input id="phone" name="phone" value={form.phone || ""} onChange={handleChange} />
+              </div>
+              <div className="field">
+                <label htmlFor="address">Address</label>
+                <input id="address" name="address" value={form.address || ""} onChange={handleChange} />
+              </div>
+            </div>
+          </div>
 
-            <Divider sx={{ mb: 3 }} />
+          <hr className="divider" />
 
-            <Typography variant="h6" gutterBottom>Preferences</Typography>
-            <Grid container spacing={2.5}>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel id="degree-level-label">Preferred degree level</InputLabel>
-                  <Select
-                    labelId="degree-level-label"
-                    name="degreeLevel"
-                    label="Preferred degree level"
-                    value={form.degreeLevel || ""}
-                    onChange={handleChange}
-                  >
-                    {DEGREE_LEVELS.map((level) => (
-                      <MenuItem key={level} value={level}>{level}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+          <div className="form-section">
+            <h3>Preferences</h3>
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="degreeLevel">Preferred degree level</label>
+                <select
+                  id="degreeLevel"
+                  className="select"
+                  name="degreeLevel"
+                  value={form.degreeLevel || ""}
+                  onChange={handleChange}
+                >
+                  <option value="">Select level</option>
+                  {DEGREE_LEVELS.map((level) => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
+              </div>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Preferred location"
+              <div className="field">
+                <label htmlFor="preferredLocation">Preferred location</label>
+                <input
+                  id="preferredLocation"
                   name="preferredLocation"
                   placeholder="e.g. Dhaka"
                   value={form.preferredLocation || ""}
                   onChange={handleChange}
-                  fullWidth
                 />
-              </Grid>
+              </div>
 
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel id="subject-category-label">Category</InputLabel>
-                  <Select
-                    labelId="subject-category-label"
-                    label="Category"
-                    value={subjectCategory}
-                    onChange={handleCategoryChange}
+              <div className="field">
+                <label htmlFor="institutionTypePreference">Institution type</label>
+                <select
+                  id="institutionTypePreference"
+                  className="select"
+                  name="institutionTypePreference"
+                  value={form.institutionTypePreference || "No preference"}
+                  onChange={handleChange}
+                >
+                  <option value="No preference">No preference</option>
+                  <option value="Public">Public only</option>
+                  <option value="Private">Private only</option>
+                </select>
+              </div>
+
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <label>Willing to study outside your preferred location?</label>
+                <div className="tab-toggle" style={{ marginBottom: 0 }}>
+                  <button
+                    type="button"
+                    className={form.willingToRelocate ? "active" : ""}
+                    onClick={() => setForm((f) => ({ ...f, willingToRelocate: true }))}
                   >
-                    {Object.keys(SUBJECT_CATEGORIES).map((category) => (
-                      <MenuItem key={category} value={category}>{category}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    className={!form.willingToRelocate ? "active" : ""}
+                    onClick={() => setForm((f) => ({ ...f, willingToRelocate: false }))}
+                  >
+                    No, local only
+                  </button>
+                </div>
+                <p className="field-hint">
+                  If "No," recommendations only include universities in your preferred location.
+                </p>
+              </div>
+
+              <div className="field">
+                <label htmlFor="subjectCategory">Category</label>
+                <select
+                  id="subjectCategory"
+                  className="select"
+                  value={subjectCategory}
+                  onChange={handleCategoryChange}
+                >
+                  <option value="">Select category</option>
+                  {Object.keys(SUBJECT_CATEGORIES).map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
 
               {subjectCategory && (
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <FormControl component="fieldset" variant="standard">
-                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      Major / field of study ({selectedSubjects.length}/{MAX_SUBJECTS})
-                    </Typography>
-                    <FormGroup row>
-                      {SUBJECT_CATEGORIES[subjectCategory].map((subject) => (
-                        <FormControlLabel
+                <div className="field" style={{ gridColumn: "1 / -1" }}>
+                  <label>Major / field of study ({selectedSubjects.length}/{MAX_SUBJECTS})</label>
+                  <div className="chip-grid">
+                    {SUBJECT_CATEGORIES[subjectCategory].map((subject) => {
+                      const selected = selectedSubjects.includes(subject);
+                      const disabled = !selected && selectedSubjects.length >= MAX_SUBJECTS;
+                      return (
+                        <button
                           key={subject}
-                          sx={{ width: { xs: "100%", sm: "48%" } }}
-                          control={
-                            <Checkbox
-                              checked={selectedSubjects.includes(subject)}
-                              onChange={() => toggleSubject(subject)}
-                              disabled={
-                                !selectedSubjects.includes(subject) &&
-                                selectedSubjects.length >= MAX_SUBJECTS
-                              }
-                            />
-                          }
-                          label={subject}
-                        />
-                      ))}
-                    </FormGroup>
-                    <FormHelperText>Select up to {MAX_SUBJECTS} in this category.</FormHelperText>
-                  </FormControl>
-                </Grid>
+                          type="button"
+                          className={`tag tag-lg tag-clickable${selected ? " tag-primary tag-filled" : ""}`}
+                          disabled={disabled}
+                          aria-pressed={selected}
+                          onClick={() => toggleSubject(subject)}
+                        >
+                          {subject}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="field-hint">Select up to {MAX_SUBJECTS} in this category.</p>
+                </div>
               )}
-            </Grid>
+            </div>
+          </div>
 
-            <Button type="submit" variant="contained" sx={{ mt: 4 }} disabled={isSubmitting}>
-              {isSubmitting ? <CircularProgress size={24} /> : "Save profile"}
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-    </Box>
+          <hr className="divider" />
+
+          <div className="form-section">
+            <h3>Documents</h3>
+            <div className="form-grid">
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <label>Transcript / marksheet</label>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                  <label className="btn-outline" style={{ cursor: uploadingTranscript ? "default" : "pointer" }}>
+                    {uploadingTranscript ? "Uploading…" : form.transcriptName ? "Replace file" : "Upload file"}
+                    <input
+                      type="file"
+                      hidden
+                      accept=".pdf,image/jpeg,image/png"
+                      onChange={handleTranscriptChange}
+                      disabled={uploadingTranscript}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                  {form.transcriptName && <span className="tag">{form.transcriptName}</span>}
+                </div>
+                <p className="field-hint">PDF, JPG, or PNG, up to 5MB.</p>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" className="btn-solid" disabled={isSubmitting} style={{ marginTop: "1rem", border: "none" }}>
+            {isSubmitting ? "Saving…" : "Save profile"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }

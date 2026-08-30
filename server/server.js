@@ -4,7 +4,8 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import universityRoutes from "./routes/universityRoutes.js";
+import universityProfileRoutes from "./routes/universityProfileRoutes.js";
+import universitiesPublicRoutes from "./routes/universitiesPublicRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import circularRoutes from "./routes/circularRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
@@ -23,7 +24,8 @@ app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/university", universityRoutes);
+app.use("/api/university", universityProfileRoutes);
+app.use("/api/universities", universitiesPublicRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/circulars", circularRoutes);
 app.use("/api/applications", applicationRoutes);
@@ -38,6 +40,6 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  // Feature 3 — start the daily deadline reminder job after DB is connected
+  // Feature 3 - start the daily deadline reminder job after DB is connected
   startReminderJob();
 });

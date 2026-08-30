@@ -9,12 +9,12 @@ import {
 
 const router = express.Router();
 
-// Notification endpoints — any authenticated user
+// Notification endpoints - any authenticated user
 router.get("/mine", protect, getMyNotifications);
 router.patch("/read-all", protect, markAllRead);
 router.patch("/:id/read", protect, markNotificationRead);
 
-// Save/unsave a circular — students only
+// Save/unsave a circular - students only
 router.post("/circulars/:id/save", protect, authorize("student"), toggleSaveCircular);
 
 export default router;

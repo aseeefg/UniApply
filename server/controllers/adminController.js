@@ -1,6 +1,6 @@
 import User from "../models/User.js";
-import Notification from "../models/Notification.js";
 import Circular from "../models/Circular.js";
+import Application from "../models/Application.js";
 
 // @route GET /api/admin/universities/pending
 export const getPendingUniversities = async (req, res) => {
@@ -74,6 +74,69 @@ export const getAdminStats = async (req, res) => {
       User.countDocuments({ role: "university", verificationStatus: "pending" }),
     ]);
     res.json({ totalStudents, totalUniversities, pendingVerifications });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ─── Feature 4: Analytics Dashboard ──────────────────────────────────────────
+
+const APPLICATION_STATUSES = ["Submitted", "Under Review", "Shortlisted", "Accepted", "Rejected"];
+
+// @route GET /api/admin/analytics
+// Platform-wide stats and chart data for the admin Analytics Dashboard
+export const getAnalytics = async (req, res) => {
+  try {
+    const [
+      pendingUniversities,
+      approvedUniversities,
+      rejectedUniversities,
+      totalCirculars,
+      activeCirculars,
+      statusCounts,
+      signups,
+    ] = await Promise.all([
+      User.countDocuments({ role: "university", verificationStatus: "pending" }),
+      User.countDocuments({ role: "university", verificationStatus: "approved" }),
+      User.countDocuments({ role: "university", verificationStatus: "rejected" }),
+      Circular.countDocuments({}),
+      Circular.countDocuments({ isActive: true }),
+      Application.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+      User.aggregate([
+        { $match: { createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const statusMap = Object.fromEntries(statusCounts.map((s) => [s._id, s.count]));
+    const applicationStatusBreakdown = APPLICATION_STATUSES.map((status) => ({
+      status,
+      count: statusMap[status] || 0,
+    }));
+
+    const signupMap = Object.fromEntries(signups.map((s) => [s._id, s.count]));
+    const signupsLast30Days = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const key = date.toISOString().slice(0, 10);
+      signupsLast30Days.push({ date: key, count: signupMap[key] || 0 });
+    }
+
+    res.json({
+      verificationBreakdown: {
+        pending: pendingUniversities,
+        approved: approvedUniversities,
+        rejected: rejectedUniversities,
+      },
+      circularCounts: { total: totalCirculars, active: activeCirculars },
+      applicationStatusBreakdown,
+      signupsLast30Days,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

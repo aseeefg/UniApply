@@ -1,203 +1,283 @@
 import { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import {
-  Box, Typography, Button, Card, CardContent, CircularProgress,
-  Alert, Stack, Divider,
-} from "@mui/material";
 import { useAuth } from "../context/AuthContext";
-import Letterhead from "../components/Letterhead";
-import NotificationBell from "../components/NotificationBell";
+import { useProfileSummary } from "../hooks/useProfileSummary";
+import DashboardCard from "../components/DashboardCard";
 import api from "../api/axios";
+import {
+  DocumentIcon,
+  ActivityIcon,
+  ClockIcon,
+  SparkleIcon,
+  ClipboardIcon,
+  UsersIcon,
+  ShieldIcon,
+  ChartIcon,
+} from "../components/icons";
 
 const roleLabels = { student: "Student", university: "University", admin: "Admin" };
 
-function StatCard({ label, value }) {
+function Stat({ label, value }) {
   return (
-    <Card sx={{ minWidth: 180, textAlign: "center", p: 2 }}>
-      <CardContent>
-        <Typography variant="h3" component="div" color="primary" gutterBottom>
-          {value}
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          {label}
-        </Typography>
-      </CardContent>
-    </Card>
+    <div>
+      <p className="text-2xl font-semibold text-ink m-0">{value}</p>
+      <p className="text-xs text-slate m-0">{label}</p>
+    </div>
   );
 }
 
-function useStats(role) {
-  const [stats, setStats] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+function Empty({ text }) {
+  return <p className="text-sm text-slate m-0">{text}</p>;
+}
+
+function CardsSkeleton() {
+  return (
+    <div style={{ display: "flex", justifyContent: "center", padding: "3rem 0" }}>
+      <span className="spinner" />
+    </div>
+  );
+}
+
+function StudentCards() {
+  const [applications, setApplications] = useState(null);
+  const [circulars, setCirculars] = useState(null);
 
   useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      if (!role) return;
-      setIsLoading(true);
-      setError(null);
-      try {
-        let data;
-        if (role === "student") {
-          const res = await api.get("/applications/mine");
-          data = res.data;
-          if (isMounted) {
-            setStats({
-              total: data.length,
-              underReview: data.filter((a) => a.status === "Under Review").length,
-              accepted: data.filter((a) => a.status === "Accepted").length,
-            });
-          }
-        } else if (role === "university") {
-          const [circsRes, appRes] = await Promise.allSettled([
-            api.get("/circulars/mine"),
-            api.get("/circulars/mine"), // placeholder — applicant count via circulars
-          ]);
-          const circs = circsRes.status === "fulfilled" ? circsRes.value.data : [];
-          if (isMounted) {
-            setStats({
-              total: circs.length,
-              active: circs.filter((c) => c.isActive).length,
-            });
-          }
-        } else if (role === "admin") {
-          const res = await api.get("/admin/stats");
-          if (isMounted) setStats(res.data);
-        }
-      } catch {
-        if (isMounted) {
-          setError("Failed to load statistics.");
-          setStats(null);
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, [role]);
+    api.get("/applications/mine").then(({ data }) => setApplications(data)).catch(() => setApplications([]));
+    api.get("/circulars").then(({ data }) => setCirculars(data)).catch(() => setCirculars([]));
+  }, []);
 
-  return { stats, isLoading, error };
+  if (!applications || !circulars) return <CardsSkeleton />;
+
+  const underReview = applications.filter((a) => a.status === "Under Review").length;
+  const accepted = applications.filter((a) => a.status === "Accepted").length;
+
+  const recentActivity = applications
+    .flatMap((a) => (a.statusHistory || []).map((h) => ({ ...h, program: a.circular?.programName })))
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 4);
+
+  const appliedIds = new Set(applications.map((a) => a.circular?._id));
+  const deadlinesToWatch = [...circulars]
+    .filter((c) => !appliedIds.has(c._id))
+    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
+    .slice(0, 3);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <DashboardCard title="Applications overview" icon={DocumentIcon}>
+        <div className="flex gap-6">
+          <Stat label="Total" value={applications.length} />
+          <Stat label="Under review" value={underReview} />
+          <Stat label="Accepted" value={accepted} />
+        </div>
+        <RouterLink to="/applications" className="btn-outline" style={{ alignSelf: "flex-start" }}>
+          View all applications
+        </RouterLink>
+      </DashboardCard>
+
+      <DashboardCard title="Recent activity" icon={ActivityIcon}>
+        {recentActivity.length === 0 ? (
+          <Empty text="No activity yet - apply to a circular to get started." />
+        ) : (
+          <ul className="flex flex-col gap-2 m-0 p-0 list-none">
+            {recentActivity.map((h, i) => (
+              <li key={i} className="flex justify-between gap-3 text-sm">
+                <span className="text-ink-soft">
+                  {h.program} - <strong className="text-ink">{h.status}</strong>
+                </span>
+                <span className="text-slate text-xs whitespace-nowrap">
+                  {new Date(h.timestamp).toLocaleDateString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </DashboardCard>
+
+      <DashboardCard title="Deadlines to watch" icon={ClockIcon}>
+        {deadlinesToWatch.length === 0 ? (
+          <Empty text="No open circulars right now." />
+        ) : (
+          <ul className="flex flex-col gap-2 m-0 p-0 list-none">
+            {deadlinesToWatch.map((c) => (
+              <li key={c._id} className="flex justify-between gap-3 text-sm">
+                <RouterLink to="/circulars" className="text-ink-soft">
+                  {c.programName}
+                </RouterLink>
+                <span className="text-brass text-xs font-medium whitespace-nowrap">
+                  {new Date(c.deadline).toLocaleDateString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </DashboardCard>
+
+      <DashboardCard title="Discover" icon={SparkleIcon}>
+        <div className="flex flex-col gap-2">
+          <RouterLink to="/recommendations" className="text-ink-soft text-sm">
+            Recommended for you
+          </RouterLink>
+          <RouterLink to="/quiz" className="text-ink-soft text-sm">
+            Not sure what to study? Take the quiz
+          </RouterLink>
+          <RouterLink to="/universities/compare" className="text-ink-soft text-sm">
+            Compare universities
+          </RouterLink>
+        </div>
+      </DashboardCard>
+    </div>
+  );
+}
+
+function UniversityCards() {
+  const [data, setData] = useState(null);
+  const profile = useProfileSummary("university");
+
+  useEffect(() => {
+    api
+      .get("/university/dashboard")
+      .then(({ data }) => setData(data))
+      .catch(() => setData({ totalCirculars: 0, activeCirculars: 0, circulars: [] }));
+  }, []);
+
+  if (!data) return <CardsSkeleton />;
+
+  const totalApplicants = data.circulars.reduce((sum, c) => sum + c.applicantCount, 0);
+  const closingSoon = [...data.circulars]
+    .filter((c) => c.isActive)
+    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
+    .slice(0, 3);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <DashboardCard title="Circulars overview" icon={ClipboardIcon}>
+        <div className="flex gap-6">
+          <Stat label="Total" value={data.totalCirculars} />
+          <Stat label="Active" value={data.activeCirculars} />
+        </div>
+        <RouterLink to="/university/circulars" className="btn-outline" style={{ alignSelf: "flex-start" }}>
+          Manage circulars
+        </RouterLink>
+      </DashboardCard>
+
+      <DashboardCard title="Applicants overview" icon={UsersIcon}>
+        <Stat label="Total applicants" value={totalApplicants} />
+        <RouterLink to="/university/applicants" className="btn-outline" style={{ alignSelf: "flex-start" }}>
+          Manage applicants
+        </RouterLink>
+      </DashboardCard>
+
+      <DashboardCard title="Deadlines closing soon" icon={ClockIcon}>
+        {closingSoon.length === 0 ? (
+          <Empty text="No active circulars right now." />
+        ) : (
+          <ul className="flex flex-col gap-2 m-0 p-0 list-none">
+            {closingSoon.map((c) => (
+              <li key={c._id} className="flex justify-between gap-3 text-sm">
+                <span className="text-ink-soft">{c.programName}</span>
+                <span className="text-brass text-xs font-medium whitespace-nowrap">
+                  {new Date(c.deadline).toLocaleDateString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </DashboardCard>
+
+      <DashboardCard title="Verification status" icon={ShieldIcon}>
+        <span
+          className={`status-badge status-${profile?.verificationStatus || "pending"}`}
+          style={{ alignSelf: "flex-start" }}
+        >
+          {profile?.verificationStatus || "-"}
+        </span>
+        {profile?.verificationStatus === "pending" && (
+          <p className="text-slate text-sm m-0">Your account is awaiting admin approval.</p>
+        )}
+        {profile?.verificationStatus === "rejected" && (
+          <p className="text-slate text-sm m-0">Your verification was rejected. Contact support for details.</p>
+        )}
+      </DashboardCard>
+    </div>
+  );
+}
+
+function AdminCards() {
+  const [stats, setStats] = useState(null);
+  const [pending, setPending] = useState(null);
+
+  useEffect(() => {
+    api
+      .get("/admin/stats")
+      .then(({ data }) => setStats(data))
+      .catch(() => setStats({ totalStudents: 0, totalUniversities: 0, pendingVerifications: 0 }));
+    api.get("/admin/universities/pending").then(({ data }) => setPending(data)).catch(() => setPending([]));
+  }, []);
+
+  if (!stats || !pending) return <CardsSkeleton />;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <DashboardCard title="Platform totals" icon={UsersIcon}>
+        <div className="flex gap-6">
+          <Stat label="Students" value={stats.totalStudents} />
+          <Stat label="Universities" value={stats.totalUniversities} />
+        </div>
+      </DashboardCard>
+
+      <DashboardCard
+        title="Pending verifications"
+        icon={ShieldIcon}
+        action={
+          <RouterLink to="/admin/verifications" className="text-sm text-seal">
+            View all →
+          </RouterLink>
+        }
+      >
+        {pending.length === 0 ? (
+          <Empty text="Nothing awaiting approval." />
+        ) : (
+          <ul className="flex flex-col gap-2 m-0 p-0 list-none">
+            {pending.slice(0, 3).map((u) => (
+              <li key={u._id} className="text-sm text-ink-soft">
+                {u.universityProfile?.universityName || u.name}
+                <span className="text-slate text-xs block">{u.universityProfile?.location}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </DashboardCard>
+
+      <DashboardCard title="Manage" icon={ChartIcon}>
+        <div className="flex flex-col gap-2">
+          <RouterLink to="/admin/users" className="text-ink-soft text-sm">
+            Manage users
+          </RouterLink>
+          <RouterLink to="/admin/analytics" className="text-ink-soft text-sm">
+            Platform analytics
+          </RouterLink>
+        </div>
+      </DashboardCard>
+    </div>
+  );
 }
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
-  const { stats, isLoading, error } = useStats(user?.role);
+  const { user } = useAuth();
 
   return (
-    <Box sx={{ maxWidth: 800, mx: "auto", mt: 4, p: 2 }}>
-      <Letterhead subtitle="Admissions Portal" />
+    <div className="dashboard">
+      <p className="eyebrow">Admissions Portal</p>
+      <h1 style={{ fontSize: "1.5rem", marginBottom: "0.3rem" }}>Welcome back, {user?.name}</h1>
+      <span className="tag tag-primary" style={{ marginBottom: "1.5rem", display: "inline-block" }}>
+        {roleLabels[user?.role] || user?.role}
+      </span>
 
-      {/* Top bar */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-        <Typography variant="h4" component="h2">
-          Welcome, {user?.name}
-        </Typography>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {/* Feature 3 — Notification Bell (shown for student & university) */}
-          {(user?.role === "student" || user?.role === "university") && (
-            <NotificationBell />
-          )}
-          <Button variant="outlined" color="secondary" onClick={logout}>
-            Log out
-          </Button>
-        </Box>
-      </Box>
-
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Signed in as {roleLabels[user?.role] || user?.role}
-      </Typography>
-
-      {isLoading && (
-        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {error && (
-        <Alert severity="error" sx={{ my: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Stats */}
-      {stats && !isLoading && (
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, my: 4, justifyContent: "center" }}>
-          {user?.role === "student" && (
-            <>
-              <StatCard label="Applications submitted" value={stats.total} />
-              <StatCard label="Under review" value={stats.underReview} />
-              <StatCard label="Accepted" value={stats.accepted} />
-            </>
-          )}
-          {user?.role === "university" && (
-            <>
-              <StatCard label="Total circulars" value={stats.total} />
-              <StatCard label="Active circulars" value={stats.active} />
-            </>
-          )}
-          {user?.role === "admin" && (
-            <>
-              <StatCard label="Total students" value={stats.totalStudents} />
-              <StatCard label="Total universities" value={stats.totalUniversities} />
-              <StatCard label="Awaiting approval" value={stats.pendingVerifications} />
-            </>
-          )}
-        </Box>
-      )}
-
-      <Divider sx={{ my: 3 }} />
-
-      {/* Navigation buttons */}
-      <Stack spacing={2} sx={{ mt: 2 }}>
-        {user?.role === "student" && (
-          <>
-            <Button component={RouterLink} to="/student/profile" variant="contained">
-              Complete / edit my profile
-            </Button>
-            <Button component={RouterLink} to="/circulars" variant="contained">
-              Browse admission circulars
-            </Button>
-            <Button component={RouterLink} to="/recommendations" variant="contained">
-              Recommended for you
-            </Button>
-            {/* Feature 5 — Application Status Tracking */}
-            <Button component={RouterLink} to="/applications" variant="contained">
-              My applications &amp; status timeline
-            </Button>
-          </>
-        )}
-
-        {user?.role === "university" && (
-          <>
-            <Button component={RouterLink} to="/university/profile" variant="contained">
-              My university profile
-            </Button>
-            <Button component={RouterLink} to="/university/circulars" variant="contained">
-              Manage my circulars
-            </Button>
-            {/* Feature 4 — Applicant Management */}
-            <Button component={RouterLink} to="/university/applicants" variant="contained">
-              Manage applicants
-            </Button>
-          </>
-        )}
-
-        {user?.role === "admin" && (
-          <>
-            <Button component={RouterLink} to="/admin/verifications" variant="contained">
-              Pending university verifications
-            </Button>
-            {/* Feature 1 — Manage Users */}
-            <Button component={RouterLink} to="/admin/users" variant="contained">
-              Manage users (students &amp; universities)
-            </Button>
-          </>
-        )}
-      </Stack>
-    </Box>
+      {user?.role === "student" && <StudentCards />}
+      {user?.role === "university" && <UniversityCards />}
+      {user?.role === "admin" && <AdminCards />}
+    </div>
   );
 }

@@ -1,9 +1,9 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider, CssBaseline } from "@mui/material";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import theme from "./muiTheme";
-import Landing from "./pages/LandingMUI";
+import GuestRoute from "./components/GuestRoute";
+import Layout from "./components/layout/Layout";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -16,18 +16,21 @@ import BrowseCirculars from "./pages/BrowseCirculars";
 import MyApplications from "./pages/MyApplications";
 import ApplicantManagement from "./pages/ApplicantManagement";
 import Recommendations from "./pages/Recommendations";
+import ProgramQuiz from "./pages/ProgramQuiz";
+import BrowseUniversities from "./pages/BrowseUniversities";
+import CompareUniversities from "./pages/CompareUniversities";
+import Analytics from "./pages/Analytics";
 import "./App.css";
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Layout>
+        <Routes>
+            <Route path="/" element={<GuestRoute><Landing /></GuestRoute>} />
+            <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+            <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
 
             <Route
               path="/dashboard"
@@ -55,7 +58,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Feature 4 — Applicant Management */}
+            {/* Feature 4 - Applicant Management */}
             <Route
               path="/university/applicants"
               element={
@@ -82,7 +85,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Feature 5 — Application Status Tracking */}
+            {/* Feature 5 - Application Status Tracking */}
             <Route
               path="/applications"
               element={
@@ -99,6 +102,31 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/quiz"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <ProgramQuiz />
+                </ProtectedRoute>
+              }
+            />
+            {/* Saved Universities + Comparison Tool */}
+            <Route
+              path="/universities"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <BrowseUniversities />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/universities/compare"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <CompareUniversities />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Admin routes */}
             <Route
@@ -109,7 +137,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* Feature 1 — Manage Users */}
+            {/* Feature 1 - Manage Users */}
             <Route
               path="/admin/users"
               element={
@@ -118,10 +146,19 @@ function App() {
                 </ProtectedRoute>
               }
             />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </ThemeProvider>
+            {/* Feature 4 - Analytics Dashboard */}
+            <Route
+              path="/admin/analytics"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+        </Routes>
+        </Layout>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

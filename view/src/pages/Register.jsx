@@ -1,18 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Card from "@mui/material/Card";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import Button from "@mui/material/Button";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import Alert from "@mui/material/Alert";
 import { useAuth } from "../context/AuthContext";
-import AuthContent from "../components/mui/AuthContent";
 
 export default function Register() {
   const [role, setRole] = useState("student");
@@ -29,11 +17,10 @@ export default function Register() {
     e.preventDefault();
     setError("");
     try {
-      const payload = {
-        ...form,
-        role,
-        ...(role === "university" && { universityProfile: { universityName } }),
-      };
+      const payload =
+        role === "university"
+          ? { email: form.email, password: form.password, role, universityProfile: { universityName } }
+          : { ...form, role };
       const data = await register(payload);
       setMessage(data.message);
       setTimeout(() => navigate("/login"), 1500);
@@ -42,109 +29,83 @@ export default function Register() {
     }
   };
 
+  const inputClass =
+    "px-3 py-2.5 border border-border rounded-md text-[0.95rem] bg-paper text-ink focus:outline-none focus:border-seal transition-colors duration-300";
+  const labelClass = "font-mono text-xs uppercase tracking-wide text-slate";
+
   return (
-    <Stack
-      direction="column"
-      component="main"
-      sx={{
-        minHeight: "100vh",
-        justifyContent: "center",
-        backgroundImage: "radial-gradient(ellipse at 50% 30%, hsl(15, 45%, 92%), transparent)",
-      }}
-    >
-      <Stack
-        direction={{ xs: "column-reverse", md: "row" }}
-        sx={{ justifyContent: "center", gap: { xs: 6, sm: 10 }, p: { xs: 2, sm: 4 }, m: "auto" }}
-      >
-        <AuthContent />
-        <Card
-          elevation={0}
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignSelf: "center",
-            width: "100%",
-            maxWidth: 420,
-            p: 4,
-            gap: 2,
-            borderRadius: "16px",
-            boxShadow: "0 8px 32px rgba(24, 42, 34, 0.1)",
-          }}
-        >
-          <Typography component="h1" variant="h4" sx={{ fontSize: "clamp(1.8rem, 6vw, 2.1rem)" }}>
-            Create your account
-          </Typography>
-          {error && <Alert severity="error">{error}</Alert>}
-          {message && <Alert severity="success">{message}</Alert>}
+    <div className="flex-1 flex items-center justify-center px-4 py-16">
+      <div className="w-full max-w-[400px] bg-card border border-border border-l-4 border-l-seal rounded-lg shadow-[0_1px_3px_rgba(24,42,34,0.06)] px-7 py-9">
+        <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
+          <h2 className="text-xl mb-1">Create your account</h2>
+          {error && <p className="error">{error}</p>}
+          {message && <p className="success">{message}</p>}
 
-          <ToggleButtonGroup
-            value={role}
-            exclusive
-            onChange={(e, val) => val && setRole(val)}
-            fullWidth
-            color="primary"
-          >
-            <ToggleButton value="student">Student</ToggleButton>
-            <ToggleButton value="university">University</ToggleButton>
-          </ToggleButtonGroup>
+          <div className="role-toggle">
+            <button
+              type="button"
+              className={role === "student" ? "active" : ""}
+              onClick={() => setRole("student")}
+            >
+              Student
+            </button>
+            <button
+              type="button"
+              className={role === "university" ? "active" : ""}
+              onClick={() => setRole("university")}
+            >
+              University
+            </button>
+          </div>
 
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <FormControl>
-              <FormLabel htmlFor="name">Full name</FormLabel>
-              <TextField id="name" name="name" value={form.name} onChange={handleChange} required fullWidth />
-            </FormControl>
-            <FormControl>
-              <FormLabel htmlFor="reg-email">Email</FormLabel>
-              <TextField
-                id="reg-email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="your@email.com"
+          {role === "student" ? (
+            <>
+              <label htmlFor="name" className={labelClass}>Full name</label>
+              <input id="name" name="name" value={form.name} onChange={handleChange} required className={inputClass} />
+            </>
+          ) : (
+            <>
+              <label htmlFor="uni-name" className={labelClass}>University name</label>
+              <input
+                id="uni-name"
+                value={universityName}
+                onChange={(e) => setUniversityName(e.target.value)}
                 required
-                fullWidth
+                className={inputClass}
               />
-            </FormControl>
-            <FormControl>
-              <FormLabel htmlFor="reg-password">Password</FormLabel>
-              <TextField
-                id="reg-password"
-                name="password"
-                type="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="••••••"
-                required
-                fullWidth
-              />
-            </FormControl>
+            </>
+          )}
 
-            {role === "university" && (
-              <FormControl>
-                <FormLabel htmlFor="uni-name">University name</FormLabel>
-                <TextField
-                  id="uni-name"
-                  value={universityName}
-                  onChange={(e) => setUniversityName(e.target.value)}
-                  required
-                  fullWidth
-                />
-              </FormControl>
-            )}
+          <label htmlFor="reg-email" className={labelClass}>Email</label>
+          <input
+            id="reg-email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="your@email.com"
+            required
+            className={inputClass}
+          />
 
-            <Button type="submit" fullWidth variant="contained">
-              Register
-            </Button>
-            <Typography sx={{ textAlign: "center" }}>
-              Already have an account?{" "}
-              <RouterLink to="/login" style={{ color: "inherit" }}>
-                Log in
-              </RouterLink>
-            </Typography>
-          </Box>
-        </Card>
-      </Stack>
-    </Stack>
+          <label htmlFor="reg-password" className={labelClass}>Password</label>
+          <input
+            id="reg-password"
+            name="password"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="••••••"
+            required
+            className={inputClass}
+          />
+
+          <button type="submit" className="btn-solid mt-2 w-full text-center">Register</button>
+          <p className="text-center text-sm text-ink-soft mt-1">
+            Already have an account? <RouterLink to="/login" className="text-seal">Log in</RouterLink>
+          </p>
+        </form>
+      </div>
+    </div>
   );
 }

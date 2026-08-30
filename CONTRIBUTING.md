@@ -1,14 +1,14 @@
 # Contributing to UniApply
 
-This document is our team's Git workflow. Follow it consistently — it's part
+This document is our team's Git workflow. Follow it consistently - it's part
 of the grading rubric and it also just makes group work less painful.
 
 ## Branches
 
-- `main` — always deployable. Protected. Only updated via PR from `develop`,
+- `main` - always deployable. Protected. Only updated via PR from `develop`,
   ideally once per sprint.
-- `develop` — integration branch. All feature branches merge here first.
-- `feature/<sprint>-<short-name>` — one branch per feature.
+- `develop` - integration branch. All feature branches merge here first.
+- `feature/<sprint>-<short-name>` - one branch per feature.
   - Examples: `feature/s1-university-profile`, `feature/s2-admission-search`,
     `feature/s3-manage-users`, `feature/s4-analytics-dashboard`
 
@@ -52,7 +52,7 @@ refactor: extract auth middleware into separate file
 - Description: what changed, how to test it, and which feature # from the
   doc it covers
 - Link the related GitHub Issue
-- Keep PRs scoped to one feature — don't bundle unrelated changes
+- Keep PRs scoped to one feature - don't bundle unrelated changes
 
 ## Issues & project board
 

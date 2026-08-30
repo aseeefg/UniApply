@@ -3,6 +3,7 @@ import { protect, authorize } from "../middleware/auth.js";
 import {
   createCircular,
   getAllCirculars,
+  getCircularFilterOptions,
   getMyCirculars,
   getCircularById,
   updateCircular,
@@ -13,6 +14,9 @@ const router = express.Router();
 
 // Public - anyone can browse circulars
 router.get("/", getAllCirculars);
+
+// Public - must come before "/:id" so these aren't treated as an ID
+router.get("/filter-options", getCircularFilterOptions);
 
 // University-only - must come before "/:id" so "mine" isn't treated as an ID
 router.get("/mine", protect, authorize("university"), getMyCirculars);

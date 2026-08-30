@@ -20,6 +20,10 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+.claude/
 
-# Uploaded files (local dev)
-server/uploads/
+# Uploaded files (local dev) - ignore actual uploads, but keep the folder in git
+server/uploads/*
+!server/uploads/documents/
+server/uploads/documents/*
+!server/uploads/documents/.gitkeep

@@ -37,7 +37,7 @@ export const getMyApplications = async (req, res) => {
     .populate({
       path: "circular",
       select: "programName department deadline degreeLevel",
-      populate: { path: "university", select: "name universityProfile.universityName" },
+      populate: { path: "university", select: "name universityProfile.universityName universityProfile.logo" },
     })
     .sort({ createdAt: -1 });
 

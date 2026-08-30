@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
+import { BuildingIcon } from "../components/icons";
+import UniversityLink from "../components/UniversityLink";
 
 export default function Recommendations() {
   const [circulars, setCirculars] = useState([]);
@@ -49,9 +51,13 @@ export default function Recommendations() {
 
   return (
     <div className="page">
-      <Link to="/dashboard" className="back-link">← Back to dashboard</Link>
       <p className="eyebrow">Student Records</p>
       <h1>Recommended For You</h1>
+      <p style={{ color: "var(--slate)", marginBottom: "1rem" }}>
+        Your top 5 matches, ranked by program fit first and location second.
+        Also see <Link to="/universities">recommended universities</Link>, or{" "}
+        <Link to="/quiz">take the program quiz</Link> if you're not sure what to study yet.
+      </p>
       {message && <p className="success">{message}</p>}
 
       {loading && <p>Loading recommendations...</p>}
@@ -70,11 +76,22 @@ export default function Recommendations() {
       <div className="card-list">
         {circulars.map((c) => (
           <div key={c._id} className="card">
-            <h3>{c.programName}</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.4rem" }}>
+              <div className="avatar avatar-md">
+                {c.university?.universityProfile?.logo ? (
+                  <img src={c.university.universityProfile.logo} alt="" />
+                ) : (
+                  <BuildingIcon width={18} height={18} />
+                )}
+              </div>
+              <h3 style={{ margin: 0 }}>{c.programName}</h3>
+            </div>
             <p>
-              {c.university?.universityProfile?.universityName || c.university?.name}
+              <UniversityLink university={c.university}>
+                {c.university?.universityProfile?.universityName || c.university?.name}
+              </UniversityLink>
             </p>
-            <p>{c.department} — {c.seatsAvailable} seats</p>
+            <p>{c.department} - {c.seatsAvailable} seats</p>
             <p>Deadline: {new Date(c.deadline).toLocaleDateString()}</p>
 
             <div className="match-tags">

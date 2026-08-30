@@ -43,7 +43,7 @@ export const markAllRead = async (req, res) => {
   }
 };
 
-// @route POST /api/circulars/:id/save  (toggle — save or unsave)
+// @route POST /api/circulars/:id/save  (toggle - save or unsave)
 // Students save a circular to receive deadline reminders
 export const toggleSaveCircular = async (req, res) => {
   try {

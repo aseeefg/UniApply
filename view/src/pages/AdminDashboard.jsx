@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import api from "../api/axios";
 
 export default function AdminDashboard() {
@@ -25,7 +24,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="page">
-      <Link to="/dashboard" className="back-link">← Back to dashboard</Link>
       <p className="eyebrow">Admin Desk</p>
       <h1>Pending University Verifications</h1>
 
@@ -39,6 +37,7 @@ export default function AdminDashboard() {
             <p>{u.universityProfile?.location}</p>
 
             <input
+              aria-label="Rejection reason"
               placeholder="Reason if rejecting (optional)"
               value={reasonDrafts[u._id] || ""}
               onChange={(e) => setReasonDrafts({ ...reasonDrafts, [u._id]: e.target.value })}

@@ -1,10 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  Badge, IconButton, Popover, Box, Typography, List, ListItem,
-  ListItemText, Divider, Button, CircularProgress, Chip,
-} from "@mui/material";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import { BellIcon } from "./icons";
 import api from "../api/axios";
 
 const formatDate = (dateStr) =>
@@ -18,8 +13,9 @@ const formatDate = (dateStr) =>
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [anchor, setAnchor] = useState(null);
+  const [open, setOpen] = useState(false);
   const intervalRef = useRef(null);
+  const wrapRef = useRef(null);
 
   const unread = notifications.filter((n) => !n.read).length;
 
@@ -28,7 +24,7 @@ export default function NotificationBell() {
       const { data } = await api.get("/notifications/mine");
       setNotifications(data);
     } catch {
-      // silently fail — bell should never crash the page
+      // silently fail - bell should never crash the page
     }
   };
 
@@ -39,14 +35,25 @@ export default function NotificationBell() {
     return () => clearInterval(intervalRef.current);
   }, []);
 
-  const openPopover = (e) => {
-    setAnchor(e.currentTarget);
-    if (!loading) {
-      setLoading(true);
-      load().finally(() => setLoading(false));
-    }
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const togglePanel = () => {
+    setOpen((prev) => {
+      const next = !prev;
+      if (next && !loading) {
+        setLoading(true);
+        load().finally(() => setLoading(false));
+      }
+      return next;
+    });
   };
-  const closePopover = () => setAnchor(null);
 
   const markAllRead = async () => {
     try {
@@ -68,130 +75,51 @@ export default function NotificationBell() {
     }
   };
 
-  const open = Boolean(anchor);
-
   return (
-    <>
-      <IconButton
+    <div style={{ position: "relative" }} ref={wrapRef}>
+      <button
         id="notification-bell"
-        onClick={openPopover}
-        color="inherit"
+        type="button"
+        className="notif-bell"
+        onClick={togglePanel}
         aria-label={`${unread} unread notifications`}
       >
-        <Badge badgeContent={unread} color="error" max={9}>
-          {unread > 0 ? <NotificationsIcon /> : <NotificationsNoneIcon />}
-        </Badge>
-      </IconButton>
+        <BellIcon width={22} height={22} />
+        {unread > 0 && <span className="notif-badge">{unread > 9 ? "9+" : unread}</span>}
+      </button>
 
-      <Popover
-        open={open}
-        anchorEl={anchor}
-        onClose={closePopover}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
-        PaperProps={{
-          sx: {
-            width: 360,
-            maxHeight: 480,
-            display: "flex",
-            flexDirection: "column",
-            borderRadius: 2,
-          },
-        }}
-      >
-        {/* Header */}
-        <Box
-          sx={{
-            px: 2,
-            py: 1.5,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            bgcolor: "background.default",
-            borderBottom: 1,
-            borderColor: "divider",
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography variant="subtitle1" fontWeight={700}>
-              Notifications
-            </Typography>
-            {unread > 0 && (
-              <Chip label={`${unread} new`} size="small" color="error" />
+      {open && (
+        <div className="notif-panel">
+          <div className="notif-panel-header">
+            <h4>Notifications{unread > 0 ? ` (${unread} new)` : ""}</h4>
+            {unread > 0 && <button onClick={markAllRead}>Mark all read</button>}
+          </div>
+
+          <div className="notif-list">
+            {loading && (
+              <div style={{ display: "flex", justifyContent: "center", padding: "1.5rem" }}>
+                <span className="spinner spinner-sm" />
+              </div>
             )}
-          </Box>
-          {unread > 0 && (
-            <Button size="small" onClick={markAllRead} sx={{ textTransform: "none" }}>
-              Mark all read
-            </Button>
-          )}
-        </Box>
-
-        {/* Notification List */}
-        <Box sx={{ overflowY: "auto", flexGrow: 1 }}>
-          {loading && (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
-              <CircularProgress size={24} />
-            </Box>
-          )}
-          {!loading && notifications.length === 0 && (
-            <Box sx={{ py: 4, textAlign: "center" }}>
-              <Typography color="text.secondary" variant="body2">
-                No notifications yet.
-              </Typography>
-            </Box>
-          )}
-          <List disablePadding>
-            {notifications.map((n, i) => (
-              <Box key={n._id}>
-                <ListItem
-                  alignItems="flex-start"
-                  onClick={() => !n.read && markOneRead(n._id)}
-                  sx={{
-                    cursor: n.read ? "default" : "pointer",
-                    bgcolor: n.read ? "transparent" : "action.hover",
-                    transition: "background 0.2s",
-                    "&:hover": { bgcolor: "action.selected" },
-                    px: 2,
-                    py: 1.5,
-                  }}
-                >
-                  <ListItemText
-                    primary={
-                      <Typography
-                        variant="body2"
-                        fontWeight={n.read ? 400 : 700}
-                        sx={{ lineHeight: 1.5 }}
-                      >
-                        {n.message}
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="caption" color="text.secondary">
-                        {formatDate(n.createdAt)}
-                      </Typography>
-                    }
-                  />
-                  {!n.read && (
-                    <Box
-                      sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        bgcolor: "error.main",
-                        mt: 1,
-                        ml: 1,
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                </ListItem>
-                {i < notifications.length - 1 && <Divider />}
-              </Box>
+            {!loading && notifications.length === 0 && (
+              <p className="notif-empty">No notifications yet.</p>
+            )}
+            {notifications.map((n) => (
+              <div
+                key={n._id}
+                className={`notif-item${n.read ? "" : " unread"}`}
+                onClick={() => !n.read && markOneRead(n._id)}
+              >
+                <div style={{ flex: 1 }}>
+                  <p>{n.message}</p>
+                  <time>{formatDate(n.createdAt)}</time>
+                </div>
+                {!n.read && <span className="notif-dot" />}
+              </div>
             ))}
-          </List>
-        </Box>
-      </Popover>
-    </>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

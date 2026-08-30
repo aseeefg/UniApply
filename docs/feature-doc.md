@@ -1,9 +1,9 @@
-# UniApply — Feature Doc & Sprint Breakdown
+# UniApply - Feature Doc & Sprint Breakdown
 
 ## Roles
-- **University** — creates profile, posts/edits/deletes circulars, manages applicants
-- **Student** — builds profile, searches/filters/compares, applies, tracks status
-- **Admin** — verifies universities, manages users, views analytics
+- **University** - creates profile, posts/edits/deletes circulars, manages applicants
+- **Student** - builds profile, searches/filters/compares, applies, tracks status
+- **Admin** - verifies universities, manages users, views analytics
 
 ## Full feature list
 
@@ -28,7 +28,7 @@
 19. Application Update Notifications
 20. Analytics Dashboard
 
-## Sprint 1 — Setup & Auth (Owner: Sabit Irfan Ronve, 14 days)
+## Sprint 1 - Setup & Auth (Owner: Sabit Irfan Ronve, 14 days)
 
 | # | Feature | Functionality |
 |---|---|---|
@@ -38,7 +38,7 @@
 | 4 | Online Application Submission | Student picks a circular and submits an application |
 | 5 | Admin Verification System | Admin approves/rejects new university accounts |
 
-## Sprint 2 — Core Features (Owner: Mantaka Mashiyat, 14 days)
+## Sprint 2 - Core Features (Owner: Mantaka Mashiyat, 14 days)
 
 | # | Feature | Functionality |
 |---|---|---|
@@ -48,7 +48,7 @@
 | 4 | Document Upload | Student uploads transcripts/certificates/ID/photo |
 | 5 | Application Dashboard | Student sees all submitted applications |
 
-## Sprint 3 — Management Features (Owner: Umme Kulsum Prova, 14 days)
+## Sprint 3 - Management Features (Owner: Umme Kulsum Prova, 14 days)
 
 | # | Feature | Functionality |
 |---|---|---|
@@ -58,7 +58,7 @@
 | 4 | Applicant Management | University reviews and updates applicant status |
 | 5 | Application Status Tracking | Student views status history with timestamps |
 
-## Sprint 4 — Advanced Features (Owner: Md. Nurul Asif, 14 days)
+## Sprint 4 - Advanced Features (Owner: Md. Nurul Asif, 14 days)
 
 | # | Feature | Functionality |
 |---|---|---|

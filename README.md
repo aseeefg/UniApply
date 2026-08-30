@@ -1,4 +1,4 @@
-# UniApply — Centralized University Admission Portal
+# UniApply - Centralized University Admission Portal
 
 CSE470 Software Engineering course project. A platform where universities post
 admission circulars and students discover, compare, and apply to them online.

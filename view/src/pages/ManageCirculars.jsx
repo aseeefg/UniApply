@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
-import { Box, Typography, Button, TextField, CircularProgress, Alert, Stack, Card, CardContent, CardActions } from "@mui/material";
 import api from "../api/axios";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useModal } from "../hooks/useModal";
 
 const emptyForm = {
   programName: "",
@@ -9,6 +9,7 @@ const emptyForm = {
   degreeLevel: "",
   seatsAvailable: "",
   minRequirements: "",
+  minGPA: "",
   applicationFee: "",
   deadline: "",
 };
@@ -17,13 +18,14 @@ export default function ManageCirculars() {
   const [circulars, setCirculars] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
-  
-  // New UX state variables
+
   const [isLoadingCirculars, setIsLoadingCirculars] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null); // { id, programName }
+  const deleteModal = useModal();
 
   const load = async () => {
     setIsLoadingCirculars(true);
@@ -49,13 +51,14 @@ export default function ManageCirculars() {
     setIsSubmitting(true);
     setError("");
     setMessage("");
-    
+
     const payload = {
       ...form,
       seatsAvailable: Number(form.seatsAvailable),
       applicationFee: Number(form.applicationFee),
+      minGPA: form.minGPA === "" ? undefined : Number(form.minGPA),
     };
-    
+
     try {
       if (editingId) {
         await api.patch(`/circulars/${editingId}`, payload);
@@ -82,18 +85,27 @@ export default function ManageCirculars() {
       degreeLevel: circular.degreeLevel || "",
       seatsAvailable: circular.seatsAvailable,
       minRequirements: circular.minRequirements,
+      minGPA: circular.minGPA ?? "",
       applicationFee: circular.applicationFee,
       deadline: circular.deadline?.slice(0, 10) || "",
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const remove = async (id) => {
+  const requestDelete = (circular) => {
+    setPendingDelete({ id: circular._id, programName: circular.programName });
+    deleteModal.openModal();
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
     setIsDeleting(true);
     setError("");
     try {
-      await api.delete(`/circulars/${id}`);
+      await api.delete(`/circulars/${pendingDelete.id}`);
       setMessage("Circular deleted successfully.");
+      deleteModal.closeModal();
+      setPendingDelete(null);
       load();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to delete circular.");
@@ -103,83 +115,112 @@ export default function ManageCirculars() {
   };
 
   return (
-    <Box className="page" sx={{ maxWidth: 800, mx: "auto", mt: 4, p: 2 }}>
-      <Button component={RouterLink} to="/dashboard" sx={{ mb: 2 }}>
-        ← Back to dashboard
-      </Button>
-      
-      <Typography variant="overline" display="block" gutterBottom>
-        University Office
-      </Typography>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Manage Admission Circulars
-      </Typography>
-      
-      {message && <Alert severity="success" sx={{ mb: 3 }}>{message}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+    <div className="page" style={{ maxWidth: 1100 }}>
+      <p className="eyebrow">University Office</p>
+      <h1>Manage Admission Circulars</h1>
 
-      <Box component="form" onSubmit={handleSubmit} sx={{ mb: 6, p: 3, border: '1px solid #eee', borderRadius: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          {editingId ? "Edit Circular" : "Post a New Circular"}
-        </Typography>
-        
-        <Stack spacing={2} sx={{ mt: 2 }}>
-          <TextField label="Program name" name="programName" value={form.programName} onChange={handleChange} required fullWidth />
-          <TextField label="Department" name="department" value={form.department} onChange={handleChange} required fullWidth />
-          <TextField label="Degree level" name="degreeLevel" value={form.degreeLevel} onChange={handleChange} fullWidth />
-          <TextField label="Seats available" name="seatsAvailable" type="number" value={form.seatsAvailable} onChange={handleChange} required fullWidth />
-          <TextField label="Minimum requirements" name="minRequirements" value={form.minRequirements} onChange={handleChange} required fullWidth multiline rows={2} />
-          <TextField label="Application fee" name="applicationFee" type="number" value={form.applicationFee} onChange={handleChange} required fullWidth />
-          <TextField label="Deadline" name="deadline" type="date" value={form.deadline} onChange={handleChange} required fullWidth InputLabelProps={{ shrink: true }} />
+      {message && <p className="success" style={{ marginBottom: "1rem" }}>{message}</p>}
+      {error && <p className="error" style={{ marginBottom: "1rem" }}>{error}</p>}
 
-          <Box sx={{ display: 'flex', gap: 2, pt: 2 }}>
-            <Button type="submit" variant="contained" disabled={isSubmitting}>
-              {isSubmitting ? <CircularProgress size={24} /> : (editingId ? "Save changes" : "Post circular")}
-            </Button>
-            {editingId && (
-              <Button type="button" variant="outlined" onClick={() => { setEditingId(null); setForm(emptyForm); }} disabled={isSubmitting}>
-                Cancel edit
-              </Button>
-            )}
-          </Box>
-        </Stack>
-      </Box>
+      <form className="stacked-form" onSubmit={handleSubmit}>
+        <h3>{editingId ? "Edit Circular" : "Post a New Circular"}</h3>
 
-      <Typography variant="h5" component="h2" gutterBottom>
-        Your Circulars
-      </Typography>
-      
-      {isLoadingCirculars ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <Stack spacing={2}>
-          {circulars.length === 0 ? (
-            <Typography color="text.secondary">No circulars posted yet.</Typography>
-          ) : (
-            circulars.map((c) => (
-              <Card key={c._id} variant="outlined">
-                <CardContent>
-                  <Typography variant="h6">{c.programName}</Typography>
-                  <Typography color="text.secondary">
-                    {c.department} — {c.seatsAvailable} seats
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    Deadline: {new Date(c.deadline).toLocaleDateString()}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button size="small" onClick={() => startEdit(c)} disabled={isSubmitting || isDeleting}>Edit</Button>
-                  <Button size="small" color="error" onClick={() => remove(c._id)} disabled={isSubmitting || isDeleting}>
-                    {isDeleting ? "Deleting..." : "Delete"}
-                  </Button>
-                </CardActions>
-              </Card>
-            ))
+        <label htmlFor="programName">Program name</label>
+        <input id="programName" name="programName" value={form.programName} onChange={handleChange} required />
+
+        <label htmlFor="department">Department</label>
+        <input id="department" name="department" value={form.department} onChange={handleChange} required />
+
+        <label htmlFor="degreeLevel">Degree level</label>
+        <input id="degreeLevel" name="degreeLevel" value={form.degreeLevel} onChange={handleChange} />
+
+        <label htmlFor="seatsAvailable">Seats available</label>
+        <input id="seatsAvailable" name="seatsAvailable" type="number" value={form.seatsAvailable} onChange={handleChange} required />
+
+        <label htmlFor="minRequirements">Minimum requirements</label>
+        <textarea id="minRequirements" name="minRequirements" rows={2} value={form.minRequirements} onChange={handleChange} required />
+
+        <label htmlFor="minGPA">Minimum GPA (out of 5.00, optional)</label>
+        <input
+          id="minGPA"
+          name="minGPA"
+          type="number"
+          min={0}
+          max={5}
+          step={0.01}
+          value={form.minGPA}
+          onChange={handleChange}
+        />
+        <p className="field-hint">
+          Set this to power the student Eligibility Checker. Leave blank if there's no single numeric cutoff.
+        </p>
+
+        <label htmlFor="applicationFee">Application fee</label>
+        <input id="applicationFee" name="applicationFee" type="number" value={form.applicationFee} onChange={handleChange} required />
+
+        <label htmlFor="deadline">Deadline</label>
+        <input
+          id="deadline"
+          name="deadline"
+          type="date"
+          value={form.deadline}
+          onChange={handleChange}
+          min={new Date().toISOString().slice(0, 10)}
+          required
+        />
+
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving…" : editingId ? "Save changes" : "Post circular"}
+          </button>
+          {editingId && (
+            <button
+              type="button"
+              onClick={() => { setEditingId(null); setForm(emptyForm); }}
+              disabled={isSubmitting}
+            >
+              Cancel edit
+            </button>
           )}
-        </Stack>
+        </div>
+      </form>
+
+      <h2 style={{ fontSize: "1.3rem", marginBottom: "1rem" }}>Your Circulars</h2>
+
+      {isLoadingCirculars ? (
+        <div style={{ display: "flex", justifyContent: "center", margin: "2rem 0" }}>
+          <span className="spinner" />
+        </div>
+      ) : circulars.length === 0 ? (
+        <p style={{ color: "var(--slate)" }}>No circulars posted yet.</p>
+      ) : (
+        <div className="card-list">
+          {circulars.map((c) => (
+            <div className="card" key={c._id}>
+              <h3>{c.programName}</h3>
+              <p>{c.department} - {c.seatsAvailable} seats</p>
+              <p>Deadline: {new Date(c.deadline).toLocaleDateString()}</p>
+              <div className="card-actions">
+                <button onClick={() => startEdit(c)} disabled={isSubmitting || isDeleting}>Edit</button>
+                <button className="btn-danger" onClick={() => requestDelete(c)} disabled={isSubmitting || isDeleting}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
-    </Box>
+
+      <ConfirmDialog
+        isOpen={deleteModal.isOpen}
+        onClose={() => { deleteModal.closeModal(); setPendingDelete(null); }}
+        onConfirm={confirmDelete}
+        title="Delete circular?"
+        message={`This permanently deletes "${pendingDelete?.programName}". Students who already applied will keep their application records, but the circular will no longer be visible or editable.`}
+        confirmLabel="Delete"
+        danger
+        isSubmitting={isDeleting}
+      />
+    </div>
   );
 }

@@ -8,14 +8,15 @@ const circularSchema = new mongoose.Schema(
     degreeLevel: { type: String },
     seatsAvailable: { type: Number, required: true },
     minRequirements: { type: String, required: true },
+    // Structured minimum GPA (out of 5.00) - optional, powers the Eligibility Checker
+    minGPA: { type: Number, min: 0, max: 5 },
     applicationFee: { type: Number, required: true },
     deadline: { type: Date, required: true },
     isActive: { type: Boolean, default: true },
-    // Feature 3 — students who saved this circular for deadline reminders
+    // Feature 3 - students who saved this circular for deadline reminders
     savedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
 
 export default mongoose.model("Circular", circularSchema);
-

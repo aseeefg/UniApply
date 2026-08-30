@@ -1,80 +1,127 @@
-# UniApply — Progress Checklist & Summary
+# UniApply - Progress Checklist & Summary
 
-## ✅ Completed & tested end-to-end
+_Last verified against the actual codebase: 2026-08-30. All 20 features from
+the feature doc are implemented and wired end-to-end (route → controller →
+model → UI). Project builds clean (`vite build`, `oxlint`, `node --check`)._
 
-- [x] Auth system — register/login, JWT, role-based access (student/university/admin)
-- [x] University Profile Management — create on register, view/edit via dashboard
-- [x] Admission Circular Posting
-- [x] Edit and Delete Circulars (ownership-checked)
-- [x] Student Profile Setup — academic info (SSC, HSC, GPA, contact)
-- [x] Online Application Submission — blocks duplicates and expired deadlines
-- [x] Application Dashboard ("My Applications")
-- [x] Admin Verification System — approve/reject universities, tested live
+## Stack
 
-**That's Sprint 1, fully done: all 5 planned features plus the auth system
-they all depend on.**
+- **Backend:** Node.js, Express, MongoDB (Mongoose), JWT auth, bcryptjs,
+  multer (file uploads), node-cron style daily job for reminders.
+- **Frontend:** React 19, Vite, React Router DOM, Axios, Tailwind (utility
+  classes) layered on a custom design system (`App.css` - Fraunces + IBM Plex
+  fonts, ink/paper/seal-red/brass palette).
+- **Structure:** Classic MVC on the backend, component-based SPA on the
+  frontend - see layout below.
 
-## 🎨 Also done — frontend & tooling (not in the original feature list, but part of the work)
+## Folder structure (MVC / MERN)
 
-- [x] Full GitHub repo set up with proper structure, README, CONTRIBUTING.md
-- [x] MVC-structured codebase (`models/`, `controllers/`, `routes/`,
-      `middleware/` on the backend; `view/` as the React frontend)
-- [x] MongoDB Atlas connected and shared across the team
-- [x] Admin account creation script (`server/scripts/createAdmin.js`)
-- [x] Full MUI-based redesign: landing page, login, register — themed to a
-      custom palette (ink/paper/seal-red/brass), Fraunces + IBM Plex fonts
-- [x] Windows setup guide written for teammates to clone and run locally
+```
+server/
+  config/db.js                  Mongo connection
+  models/                       Mongoose schemas (M)
+  controllers/                  business logic (C)
+  routes/                       Express routers, map URL -> controller
+  middleware/                   auth (JWT + role guard), multer upload config
+  jobs/                         reminderJob.js - daily cron-style job
+  scripts/createAdmin.js        one-off admin bootstrap script
+  uploads/documents/            multer upload target (gitignored, kept via .gitkeep)
+  server.js                     app entrypoint, mounts all routers
 
-## 🟡 Partially there (backend supports it, no dedicated UI yet)
+view/
+  src/pages/                    one file per route (the "views")
+  src/components/               shared/reusable UI pieces
+  src/components/layout/        Header, Sidebar, Topbar, Footer, Layout shell
+  src/context/                  AuthContext (global auth state)
+  src/hooks/                    useModal, useToast, useProfileSummary
+  src/api/axios.js              configured Axios instance (base URL, auth header)
+  src/config/navigation.js      role-based nav config
+```
 
-- [ ] University Dashboard — currently just a circular list, doesn't yet show
-      applicant counts (needs Applicant Management built first)
-- [ ] Application Status Tracking UI — the data model already stores full
-      timestamped status history, but no page displays that history yet
+No stray test scripts, scratch files, or unused reference code remain in the
+repo (the unused `tempUi/` Next.js template - 11MB, never imported anywhere -
+has been deleted).
 
-## ⬜ Not started (Sprints 2–4, per the feature doc)
+## ✅ Sprint 1 - Setup & Auth - complete (5/5)
 
-- [ ] Admission Search
-- [ ] Document Upload
-- [ ] Advanced Filtering
-- [ ] University Comparison Tool
-- [ ] Saved Universities
-- [ ] Student Eligibility Checker
-- [ ] Applicant Management
-- [ ] Manage Users
-- [ ] Deadline Reminder Notifications
-- [ ] Application Update Notifications
-- [ ] Analytics Dashboard
+| Feature | Backend | Frontend |
+|---|---|---|
+| Auth (register/login, JWT, RBAC) | `authController.js`, `authRoutes.js`, `middleware/auth.js` | `Login.jsx`, `Register.jsx`, `context/AuthContext.jsx` |
+| University Profile Management | `universityController.js`, `universityProfileRoutes.js` (`/api/university/profile`) | `UniversityProfile.jsx` |
+| Admission Circular Posting | `circularController.js` (`createCircular`), `circularRoutes.js` | `ManageCirculars.jsx` |
+| Student Profile Setup | `studentController.js`, `studentRoutes.js` (`/api/student/profile`) | `StudentProfile.jsx` |
+| Online Application Submission | `applicationController.js` (`submitApplication`), `applicationRoutes.js` - blocks duplicates and expired deadlines | `BrowseCirculars.jsx` (apply action) |
+| Admin Verification System | `adminController.js` (`verifyUniversity`), `adminRoutes.js` | `AdminDashboard.jsx` |
 
-## Summary of what's been worked on
+## ✅ Sprint 2 - Core Features - complete (5/5)
 
-Sprint 1 is complete and verified working end to end — not just built, but
-actually tested through the full flow (register → profile → post circular →
-apply → track status → admin approval). On top of the feature list itself,
-significant time went into getting the engineering fundamentals right:
-proper Git/GitHub workflow, a real MVC-structured codebase, a shared cloud
-database, and a deliberate design system rather than default styling — since
-those are graded alongside the features themselves.
+| Feature | Backend | Frontend |
+|---|---|---|
+| Admission Search | `circularController.js` (`getAllCirculars` with tokenized multi-word search) | `BrowseCirculars.jsx` |
+| Edit and Delete Circulars | `circularController.js` (`updateCircular`, `deleteCircular`, ownership-checked) | `ManageCirculars.jsx` |
+| University Dashboard | `universityController.js` (`getUniversityDashboard`) | `Dashboard.jsx` |
+| Document Upload | `applicationController.js` (`uploadDocuments`), `middleware/uploadMiddleware.js`, `POST /api/applications/:id/documents` | `MyApplications.jsx` (upload UI) |
+| Application Dashboard | `applicationController.js` (`getMyApplications`) | `MyApplications.jsx` |
 
-## What to work on next
+## ✅ Sprint 3 - Management Features - complete (5/5)
 
-Agreed plan from last session:
+| Feature | Backend | Frontend |
+|---|---|---|
+| Manage Users | `adminController.js` (`getAllUsers`, `toggleUserActive`) | `ManageUsers.jsx` |
+| Advanced Filtering | `circularController.js` (`getCircularFilterOptions`, filter params on `getAllCirculars`) | `BrowseCirculars.jsx` |
+| Deadline Reminder Notifications | `jobs/reminderJob.js` (daily, 3-day window), `models/Notification.js` | `NotificationBell.jsx` |
+| Applicant Management | `applicationController.js` (`getApplicantsForCircular`, `updateApplicationStatus`) | `ApplicantManagement.jsx` |
+| Application Status Tracking | `models/Application.js` (`statusHistory` subdocument, timestamped) | `MyApplications.jsx` (timeline UI) |
 
-1. **Add interest/preference fields to student profile setup** — degree
-   level, subject interests, preferred location
-2. **Personalized recommendations (rule-based)** — match a student's
-   interests/location against open circulars, essentially a smarter,
-   personalized version of Admission Search
-3. **AI-generated "why this fits you" explanations** — layered on top,
-   clearly framed as suggestions, not guarantees (explicitly NOT an
-   admission-chance predictor — see below)
+## ✅ Sprint 4 - Advanced Features - complete (5/5)
 
-After that, the rest of Sprint 2 (Admission Search, Document Upload) and
-Sprint 3 (Applicant Management, Manage Users, Deadline Reminders) are the
-next logical targets, since they're still fully unbuilt.
+| Feature | Backend | Frontend |
+|---|---|---|
+| Application Update Notifications | `applicationController.js` - `Notification.create(...)` fires on every status change | `NotificationBell.jsx` |
+| Saved Universities | `User.savedUniversities`, `universitiesPublicRoutes.js` (`GET /saved/mine`, `POST /:id/save`) | `BrowseUniversities.jsx` ("saved only" filter) |
+| University Comparison Tool | `universitiesPublicRoutes.js` (`getUniversityById`) | `BrowseUniversities.jsx` (pick up to 3) + `CompareUniversities.jsx` (side-by-side table) |
+| Analytics Dashboard | `adminController.js` (`getAnalytics`) - verification breakdown, application status counts, signups over time | `Analytics.jsx` - stat cards + inline SVG bar charts |
+| Student Eligibility Checker | `Circular.minGPA` (structured, optional), `studentController.js` (`checkEligibility`), `GET /api/student/eligibility/:circularId` | `BrowseCirculars.jsx` ("Check eligibility" action) |
 
-**One thing intentionally left out:** an "admission chance %" predictor was
-discussed and deliberately rejected — it would need historical outcome data
-that doesn't exist, so any number produced would be fabricated confidence
-rather than a real prediction. The Eligibility Checker (comparing GPA
-against a circular's stated minimum) is the honest version of that idea.
+## 🎨 Also built - beyond the original 20 features
+
+- **Recommendations** (`Recommendations.jsx`, `getRecommendations` /
+  `getRecommendedUniversities` in `studentController.js`) - rule-based
+  matching of a student's interests/location against open circulars and
+  universities.
+- **Program Quiz** (`ProgramQuiz.jsx`, `generateProgramSuggestions` in
+  `studentController.js`) - short quiz that suggests degree programs via the
+  OpenRouter API, for students who haven't picked a field yet.
+- Full role-based navigation (`config/navigation.js`), toast/modal/pagination
+  system shared across pages (`components/Toast.jsx`, `Modal.jsx`,
+  `Pagination.jsx`, `ConfirmDialog.jsx`).
+- Admin bootstrap script (`server/scripts/createAdmin.js`).
+
+## Polish pass (this round)
+
+- Removed unused `tempUi/` reference template (11MB Next.js dashboard clone,
+  never imported by the app).
+- Fixed 5 form fields/controls missing accessible labels: the university
+  profile form (7 fields - added matching `id`/`htmlFor` pairs), the admin
+  rejection-reason input, the user-search box, the applicant status selector,
+  and the document-type selector (all given `aria-label`s to match the
+  labeling pattern already used elsewhere, e.g. `StudentProfile.jsx`,
+  `ManageCirculars.jsx`).
+- Fixed one inline heading size (`Dashboard.jsx`) that drifted from the
+  standard `1.5rem` page-heading size used everywhere else.
+- Verified: `vite build` (frontend) and `node --check` (backend) both pass
+  clean; `oxlint` has zero errors (one pre-existing, harmless
+  react-refresh warning in `AuthContext.jsx` from co-locating a hook with
+  the provider - not a defect); no `console.log`/debug/placeholder text left
+  in shipped code; no duplicate route/controller exports; every route in
+  `server.js` resolves to a real, non-dead controller function.
+
+## Known non-blockers (documented, not defects)
+
+- `docs/project_review.md` is an earlier AI-generated review and still
+  references the old MUI-based frontend, which has since been replaced by
+  the Tailwind + custom CSS design system - left as historical record, not
+  regenerated, since it isn't part of the graded feature set.
+- Landing page hero headings intentionally use a larger type scale than the
+  in-app page headers (normal for a marketing/landing page vs. dashboard
+  chrome) - not a consistency bug.
